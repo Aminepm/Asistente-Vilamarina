@@ -339,7 +339,7 @@
     </div>
     Asistente Vilamarina
   </a>
-  <span class="header-badge">Barna Porters S.L.</span>
+  <span class="header-badge">Amine</span>
 </header>
 
 <main>
@@ -567,7 +567,7 @@
 </main>
 
 <footer>
-  Asistente Vilamarina · Barna Porters S.L. · Powered by <a href="https://anthropic.com" target="_blank">Claude (Anthropic)</a>
+  Asistente Vilamarina · Amine · Powered by <a href="https://anthropic.com" target="_blank">Claude (Anthropic)</a>
 </footer>
 
 <div class="toast" id="toast"></div>
@@ -655,28 +655,28 @@
       const idioma = document.getElementById('email-idioma').value;
       const asunto = document.getElementById('email-asunto').value || '';
       const contenido = document.getElementById('email-contenido').value || '';
-      return `Redacta un email profesional en ${idioma} para enviar a: ${dest}. Asunto: ${asunto}. Mensaje a transmitir: ${contenido}. El email es en nombre de la gestión del Centre Comercial Vilamarina (Barna Porters S.L.), ubicado en Sant Joan Despí, Barcelona. Tono formal y conciso. Incluye saludo, cuerpo bien estructurado y despedida profesional. No incluyas asunto en el cuerpo del email.`;
+      return `Redacta un email profesional en ${idioma} para enviar a: ${dest}. Asunto: ${asunto}. Mensaje a transmitir: ${contenido}. El email es en nombre de la gestión del Centre Comercial Vilamarina, ubicado en Sant Joan Despí, Barcelona. Tono formal y conciso. Incluye saludo, cuerpo bien estructurado y despedida profesional. No incluyas asunto en el cuerpo del email.`;
     }
     if (tool === 'incidencia') {
       const ubi = document.getElementById('inc-ubi').value || 'no especificada';
       const tipo = document.getElementById('inc-tipo').value;
       const desc = document.getElementById('inc-desc').value || '';
       const medidas = document.getElementById('inc-medidas').value || 'pendiente';
-      return `Redacta un parte de incidencia formal para el Centre Comercial Vilamarina (Barna Porters S.L.), Sant Joan Despí, Barcelona. Fecha: ${today}. Datos: Ubicación: ${ubi}. Tipo: ${tipo}. Descripción: ${desc}. Medidas tomadas: ${medidas}. Formato de documento oficial con encabezado, número de referencia (genera uno ficticio), secciones claramente diferenciadas y espacio para firma.`;
+      return `Redacta un parte de incidencia formal para el Centre Comercial Vilamarina, Sant Joan Despí, Barcelona. Fecha: ${today}. Datos: Ubicación: ${ubi}. Tipo: ${tipo}. Descripción: ${desc}. Medidas tomadas: ${medidas}. Formato de documento oficial con encabezado, número de referencia (genera uno ficticio), secciones claramente diferenciadas y espacio para firma.`;
     }
     if (tool === 'autorizacion') {
       const nombre = document.getElementById('aut-nombre').value || 'operario';
       const trabajo = document.getElementById('aut-trabajo').value || 'trabajos de mantenimiento';
       const zona = document.getElementById('aut-zona').value || 'zona indicada';
       const fecha = document.getElementById('aut-fecha').value || 'fecha a confirmar';
-      return `Redacta una autorización formal de acceso para el Centre Comercial Vilamarina (Barna Porters S.L.), Sant Joan Despí, Barcelona. Fecha de emisión: ${today}. Operario/empresa autorizada: ${nombre}. Trabajo a realizar: ${trabajo}. Zona de acceso: ${zona}. Fecha y horario de acceso: ${fecha}. Formato de documento oficial con número de referencia, condiciones de acceso básicas y espacio para firma de la dirección del centro.`;
+      return `Redacta una autorización formal de acceso para el Centre Comercial Vilamarina, Sant Joan Despí, Barcelona. Fecha de emisión: ${today}. Operario/empresa autorizada: ${nombre}. Trabajo a realizar: ${trabajo}. Zona de acceso: ${zona}. Fecha y horario de acceso: ${fecha}. Formato de documento oficial con número de referencia, condiciones de acceso básicas y espacio para firma de la dirección del centro.`;
     }
     if (tool === 'comunicado') {
       const dest = document.getElementById('com-dest').value || 'el equipo';
       const asunto = document.getElementById('com-asunto').value || '';
       const contenido = document.getElementById('com-contenido').value || '';
       const idioma = document.getElementById('com-idioma').value;
-      return `Redacta un comunicado interno en ${idioma} del Centre Comercial Vilamarina (Barna Porters S.L.), Sant Joan Despí, Barcelona. Fecha: ${today}. Dirigido a: ${dest}. Asunto: ${asunto}. Mensaje: ${contenido}. Tono profesional y directo. Incluye encabezado con logo textual del centro, cuerpo del mensaje bien estructurado y cierre con firma de la dirección.`;
+      return `Redacta un comunicado interno en ${idioma} del Centre Comercial Vilamarina, Sant Joan Despí, Barcelona. Fecha: ${today}. Dirigido a: ${dest}. Asunto: ${asunto}. Mensaje: ${contenido}. Tono profesional y directo. Incluye encabezado con logo textual del centro, cuerpo del mensaje bien estructurado y cierre con firma de la dirección.`;
     }
   }
 
