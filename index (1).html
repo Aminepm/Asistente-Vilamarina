@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente Vilamarina</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --border: #E2E0D8;
+    --text-primary: #1A1917;
+    --text-secondary: #6B6860;
+    --text-hint: #9B9890;
+    --accent: #1A56DB;
+    --accent-light: #EBF1FD;
+    --accent-text: #1642B0;
+    --success: #0B6E4F;
+    --success-bg: #E6F4EE;
+    --danger: #C0392B;
+    --danger-bg: #FDF0EF;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Mono', monospace;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 18px; height: 18px; fill: white; }
+  .header-badge {
+    font-size: 12px;
+    background: var(--accent-light);
+    color: var(--accent-text);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+  }
+
+  /* API KEY DESPLEGABLE */
+  .api-widget {
+    margin-bottom: 2rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .api-widget.connected { border-color: #A7D7C0; }
+  .api-widget-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .api-widget-header:hover { background: var(--bg); }
+  .api-widget-left { display: flex; align-items: center; gap: 10px; }
+  .api-status-icon { font-size: 20px; line-height: 1; }
+  .api-widget-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .api-widget-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+  .api-chevron { font-size: 11px; color: var(--text-hint); transition: transform 0.2s; }
+  .api-chevron.open { transform: rotate(180deg); }
+  .api-widget-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+  .api-widget-body.open {
+    max-height: 200px;
+    border-top: 1px solid var(--border);
+  }
+  .api-widget-body-inner { padding: 16px 18px; }
+  .api-widget-body label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+  .api-widget-body input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-family: var(--mono);
+    background: var(--bg);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+  }
+  .api-widget-body input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.10); }
+  .api-widget-body .hint { font-size: 12px; color: var(--text-hint); margin-top: 6px; }
+  .api-widget-body .hint a { color: var(--accent); text-decoration: none; }
+  .api-widget-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .btn-connect {
+    background: var(--accent); color: white; border: none;
+    border-radius: var(--radius); padding: 8px 18px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: opacity 0.15s; font-family: var(--font);
+  }
+  .btn-connect:hover { opacity: 0.88; }
+  .btn-disconnect {
+    background: transparent; color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 8px 14px; font-size: 13px; cursor: pointer;
+    font-family: var(--font); transition: background 0.15s;
+  }
+  .btn-disconnect:hover { background: var(--danger-bg); color: var(--danger); border-color: #F5C6C2; }
+
+  /* PAGE TITLE */
+  .page-title { margin-bottom: 1.75rem; }
+  .page-title h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+  .page-title p { color: var(--text-secondary); font-size: 15px; }
+
+  /* TOOLS GRID */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .tool-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+    box-shadow: var(--shadow);
+    user-select: none;
+  }
+  .tool-card:hover { border-color: #C5D5F5; box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .tool-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.12); }
+  .tool-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px;
+    font-size: 20px;
+  }
+  .icon-email { background: #EBF1FD; }
+  .icon-incidencia { background: #FEF3E2; }
+  .icon-autorizacion { background: #E6F4EE; }
+  .icon-comunicado { background: #F4EDFB; }
+  .tool-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .tool-card p { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+
+  /* FORM PANEL */
+  .form-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-md);
+    display: none;
+    animation: slideIn 0.2s ease;
+  }
+  .form-panel.visible { display: block; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .form-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-header-icon { font-size: 20px; }
+  .form-header h2 { font-size: 17px; font-weight: 600; }
+
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 5px; }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-family: var(--font);
+    color: var(--text-primary);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(26,86,219,0.10);
+    background: var(--surface);
+  }
+  .field textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
+  .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6860' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; cursor: pointer; }
+
+  .fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 1.5rem; }
+  .btn-generate {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: opacity 0.15s;
+    font-family: var(--font);
+  }
+  .btn-generate:hover:not(:disabled) { opacity: 0.88; }
+  .btn-generate:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-clear {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background 0.15s;
+  }
+  .btn-clear:hover { background: var(--bg); }
+
+  /* RESULT */
+  .result-box {
+    margin-top: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    display: none;
+    animation: slideIn 0.2s ease;
+  }
+  .result-box.visible { display: block; }
+  .result-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .result-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+  .result-actions { display: flex; gap: 6px; }
+  .btn-copy, .btn-download {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-family: var(--font);
+    display: flex; align-items: center; gap: 4px;
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn-copy:hover, .btn-download:hover { background: var(--accent-light); color: var(--accent-text); border-color: #C5D5F5; }
+  .btn-copy.copied { background: var(--success-bg); color: var(--success); border-color: #A7D7C0; }
+  .result-content {
+    padding: 1.25rem 1.5rem;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    min-height: 60px;
+    background: var(--surface);
+  }
+  .result-content:empty::after { content: ''; }
+
+  /* SPINNER */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.65s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--text-primary); color: white;
+    padding: 10px 18px; border-radius: var(--radius);
+    font-size: 14px; font-weight: 500;
+    box-shadow: var(--shadow-md);
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none; z-index: 9999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--danger); }
+
+  /* FOOTER */
+  footer {
+    text-align: center; padding: 2rem;
+    font-size: 13px; color: var(--text-hint);
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  @media (max-width: 600px) {
+    main { padding: 1.5rem 1rem; }
+    .fields-row { grid-template-columns: 1fr; }
+    .api-banner { flex-direction: column; align-items: stretch; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header>
+  <a class="logo" href="#">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+    </div>
+    Asistente Vilamarina
+  </a>
+  <span class="header-badge">Amine</span>
+</header>
+
+<main>
+
+  <!-- API KEY DESPLEGABLE -->
+  <div class="api-widget" id="apiWidget">
+    <div class="api-widget-header" onclick="toggleApiWidget()">
+      <div class="api-widget-left">
+        <span class="api-status-icon" id="apiStatusIcon">🔴</span>
+        <div>
+          <div class="api-widget-title" id="apiWidgetTitle">API Key · No conectada</div>
+          <div class="api-widget-subtitle" id="apiWidgetSubtitle">Haz clic para introducir tu clave de OpenRouter</div>
+        </div>
+      </div>
+      <span class="api-chevron" id="apiChevron">▼</span>
+    </div>
+    <div class="api-widget-body" id="apiWidgetBody">
+      <div class="api-widget-body-inner">
+        <label for="apiKeyInput">Clave API de OpenRouter</label>
+        <input type="password" id="apiKeyInput" placeholder="sk-or-..." autocomplete="off">
+        <p class="hint">Consigue tu clave gratis en <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a>. Se guarda solo en tu navegador.</p>
+        <div class="api-widget-actions">
+          <button class="btn-connect" onclick="saveApiKey()">Conectar</button>
+          <button class="btn-disconnect" onclick="desconectar()">Borrar clave</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-title">
+    <h1>¿Qué quieres redactar?</h1>
+    <p>Selecciona una tarea, rellena los campos y la IA genera el texto en segundos.</p>
+  </div>
+
+  <!-- TOOLS -->
+  <div class="tools-grid">
+    <div class="tool-card" onclick="selectTool('email', this)">
+      <div class="tool-icon icon-email">✉️</div>
+      <h3>Email</h3>
+      <p>A proveedor, operario o equipo de seguridad</p>
+    </div>
+    <div class="tool-card" onclick="selectTool('incidencia', this)">
+      <div class="tool-icon icon-incidencia">⚠️</div>
+      <h3>Parte de incidencia</h3>
+      <p>Registro formal de incidencias del centro</p>
+    </div>
+    <div class="tool-card" onclick="selectTool('autorizacion', this)">
+      <div class="tool-icon icon-autorizacion">✅</div>
+      <h3>Autorización operario</h3>
+      <p>Permiso de acceso para trabajos</p>
+    </div>
+    <div class="tool-card" onclick="selectTool('comunicado', this)">
+      <div class="tool-icon icon-comunicado">📢</div>
+      <h3>Comunicado interno</h3>
+      <p>Avisos y circulares para el equipo</p>
+    </div>
+  </div>
+
+  <!-- FORM: EMAIL -->
+  <div class="form-panel" id="form-email">
+    <div class="form-header">
+      <span class="form-header-icon">✉️</span>
+      <h2>Redactar email</h2>
+    </div>
+    <div class="fields-row">
+      <div class="field">
+        <label>Destinatario</label>
+        <input type="text" id="email-dest" placeholder="ej: proveedor de limpieza">
+      </div>
+      <div class="field">
+        <label>Idioma</label>
+        <select id="email-idioma">
+          <option value="español">Español</option>
+          <option value="catalán">Catalán</option>
+          <option value="inglés">Inglés</option>
+          <option value="búlgaro">Búlgaro</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Asunto</label>
+      <input type="text" id="email-asunto" placeholder="ej: solicitud de presupuesto, aviso de incidencia...">
+    </div>
+    <div class="field">
+      <label>¿Qué quieres comunicar?</label>
+      <textarea id="email-contenido" placeholder="ej: el ascensor del acceso norte lleva 3 días averiado y necesitamos intervención urgente"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-generate" id="btn-email" onclick="generar('email')">
+        <span>✦</span> Generar email
+      </button>
+      <button class="btn-clear" onclick="limpiar('email')">Limpiar</button>
+    </div>
+    <div class="result-box" id="result-email">
+      <div class="result-header">
+        <span class="result-label">✦ Texto generado</span>
+        <div class="result-actions">
+          <button class="btn-copy" onclick="copiar('email', this)">📋 Copiar</button>
+          <button class="btn-download" onclick="descargar('email')">⬇ Descargar</button>
+        </div>
+      </div>
+      <div class="result-content" id="text-email"></div>
+    </div>
+  </div>
+
+  <!-- FORM: INCIDENCIA -->
+  <div class="form-panel" id="form-incidencia">
+    <div class="form-header">
+      <span class="form-header-icon">⚠️</span>
+      <h2>Parte de incidencia</h2>
+    </div>
+    <div class="fields-row">
+      <div class="field">
+        <label>Ubicación</label>
+        <input type="text" id="inc-ubi" placeholder="ej: pasillo A, máquina expendedora 3">
+      </div>
+      <div class="field">
+        <label>Tipo de incidencia</label>
+        <select id="inc-tipo">
+          <option>Avería</option>
+          <option>Accidente</option>
+          <option>Problema de seguridad</option>
+          <option>Vandalismo</option>
+          <option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Descripción de lo ocurrido</label>
+      <textarea id="inc-desc" placeholder="ej: la máquina expendedora no devuelve el cambio y ha retenido productos de al menos 2 clientes"></textarea>
+    </div>
+    <div class="field">
+      <label>Medidas tomadas (si las hay)</label>
+      <input type="text" id="inc-medidas" placeholder="ej: se ha señalizado la zona, se ha avisado a mantenimiento">
+    </div>
+    <div class="form-actions">
+      <button class="btn-generate" id="btn-incidencia" onclick="generar('incidencia')">
+        <span>✦</span> Generar parte
+      </button>
+      <button class="btn-clear" onclick="limpiar('incidencia')">Limpiar</button>
+    </div>
+    <div class="result-box" id="result-incidencia">
+      <div class="result-header">
+        <span class="result-label">✦ Texto generado</span>
+        <div class="result-actions">
+          <button class="btn-copy" onclick="copiar('incidencia', this)">📋 Copiar</button>
+          <button class="btn-download" onclick="descargar('incidencia')">⬇ Descargar</button>
+        </div>
+      </div>
+      <div class="result-content" id="text-incidencia"></div>
+    </div>
+  </div>
+
+  <!-- FORM: AUTORIZACIÓN -->
+  <div class="form-panel" id="form-autorizacion">
+    <div class="form-header">
+      <span class="form-header-icon">✅</span>
+      <h2>Autorización de operario</h2>
+    </div>
+    <div class="fields-row">
+      <div class="field">
+        <label>Nombre del operario / empresa</label>
+        <input type="text" id="aut-nombre" placeholder="ej: Juan García / Mantenimiento SL">
+      </div>
+      <div class="field">
+        <label>Fecha y horario</label>
+        <input type="text" id="aut-fecha" placeholder="ej: 12/06/2026, de 09:00 a 13:00">
+      </div>
+    </div>
+    <div class="field">
+      <label>Trabajo a realizar</label>
+      <input type="text" id="aut-trabajo" placeholder="ej: revisión del sistema eléctrico del local 24">
+    </div>
+    <div class="field">
+      <label>Zona de acceso</label>
+      <input type="text" id="aut-zona" placeholder="ej: sótano 1, cuadro eléctrico general">
+    </div>
+    <div class="form-actions">
+      <button class="btn-generate" id="btn-autorizacion" onclick="generar('autorizacion')">
+        <span>✦</span> Generar autorización
+      </button>
+      <button class="btn-clear" onclick="limpiar('autorizacion')">Limpiar</button>
+    </div>
+    <div class="result-box" id="result-autorizacion">
+      <div class="result-header">
+        <span class="result-label">✦ Texto generado</span>
+        <div class="result-actions">
+          <button class="btn-copy" onclick="copiar('autorizacion', this)">📋 Copiar</button>
+          <button class="btn-download" onclick="descargar('autorizacion')">⬇ Descargar</button>
+        </div>
+      </div>
+      <div class="result-content" id="text-autorizacion"></div>
+    </div>
+  </div>
+
+  <!-- FORM: COMUNICADO -->
+  <div class="form-panel" id="form-comunicado">
+    <div class="form-header">
+      <span class="form-header-icon">📢</span>
+      <h2>Comunicado interno</h2>
+    </div>
+    <div class="fields-row">
+      <div class="field">
+        <label>Dirigido a</label>
+        <input type="text" id="com-dest" placeholder="ej: personal de seguridad, todo el equipo">
+      </div>
+      <div class="field">
+        <label>Idioma</label>
+        <select id="com-idioma">
+          <option value="español">Español</option>
+          <option value="catalán">Catalán</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Asunto</label>
+      <input type="text" id="com-asunto" placeholder="ej: cambio de acceso al aparcamiento por obras">
+    </div>
+    <div class="field">
+      <label>Mensaje a transmitir</label>
+      <textarea id="com-contenido" placeholder="ej: a partir del lunes el acceso al aparcamiento de empleados cambia por obras, usar la entrada del pasillo B"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-generate" id="btn-comunicado" onclick="generar('comunicado')">
+        <span>✦</span> Generar comunicado
+      </button>
+      <button class="btn-clear" onclick="limpiar('comunicado')">Limpiar</button>
+    </div>
+    <div class="result-box" id="result-comunicado">
+      <div class="result-header">
+        <span class="result-label">✦ Texto generado</span>
+        <div class="result-actions">
+          <button class="btn-copy" onclick="copiar('comunicado', this)">📋 Copiar</button>
+          <button class="btn-download" onclick="descargar('comunicado')">⬇ Descargar</button>
+        </div>
+      </div>
+      <div class="result-content" id="text-comunicado"></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Asistente Vilamarina · Amine · Powered by <a href="https://openrouter.ai" target="_blank">OpenRouter</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let apiKey = localStorage.getItem('vilamarina_openrouter_apikey') || '';
+  let widgetOpen = false;
+
+  function toggleApiWidget() {
+    widgetOpen = !widgetOpen;
+    document.getElementById('apiWidgetBody').classList.toggle('open', widgetOpen);
+    document.getElementById('apiChevron').classList.toggle('open', widgetOpen);
+  }
+
+  function updateApiStatus(connected) {
+    const widget = document.getElementById('apiWidget');
+    const icon = document.getElementById('apiStatusIcon');
+    const title = document.getElementById('apiWidgetTitle');
+    const subtitle = document.getElementById('apiWidgetSubtitle');
+    if (connected) {
+      widget.classList.add('connected');
+      icon.textContent = '🟢';
+      title.textContent = 'API Key · Conectada';
+      subtitle.textContent = 'OpenRouter activo — listo para usar';
+    } else {
+      widget.classList.remove('connected');
+      icon.textContent = '🔴';
+      title.textContent = 'API Key · No conectada';
+      subtitle.textContent = 'Haz clic para introducir tu clave de OpenRouter';
+    }
+  }
+
+  function saveApiKey() {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    if (!val.startsWith('sk-or') && val.length < 20) {
+      showToast('La API key no parece válida. Debe empezar por sk-or-...', true);
+      return;
+    }
+    apiKey = val;
+    localStorage.setItem('vilamarina_openrouter_apikey', apiKey);
+    updateApiStatus(true);
+    // Cerrar desplegable
+    widgetOpen = false;
+    document.getElementById('apiWidgetBody').classList.remove('open');
+    document.getElementById('apiChevron').classList.remove('open');
+    showToast('Conectado. ¡Ya puedes usar el asistente!');
+  }
+
+  function desconectar() {
+    apiKey = '';
+    localStorage.removeItem('vilamarina_openrouter_apikey');
+    document.getElementById('apiKeyInput').value = '';
+    updateApiStatus(false);
+    showToast('Clave eliminada.');
+  }
+
+  if (apiKey) {
+    document.getElementById('apiKeyInput').value = apiKey;
+    updateApiStatus(true);
+  }
+
+  function selectTool(tool, el) {
+    document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('visible'));
+    el.classList.add('active');
+    const panel = document.getElementById('form-' + tool);
+    panel.classList.add('visible');
+    setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  }
+
+  function limpiar(tool) {
+    document.querySelectorAll('#form-' + tool + ' input, #form-' + tool + ' textarea').forEach(el => el.value = '');
+    document.getElementById('result-' + tool).classList.remove('visible');
+    document.getElementById('text-' + tool).textContent = '';
+  }
+
+  function copiar(tool, btn) {
+    const text = document.getElementById('text-' + tool).textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✓ Copiado';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  function descargar(tool) {
+    const text = document.getElementById('text-' + tool).textContent;
+    if (!text) return;
+    const nombres = { email: 'email', incidencia: 'parte_incidencia', autorizacion: 'autorizacion', comunicado: 'comunicado' };
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `vilamarina_${nombres[tool]}_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+  }
+
+  function buildPrompt(tool) {
+    const today = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (tool === 'email') {
+      const dest = document.getElementById('email-dest').value || 'destinatario';
+      const idioma = document.getElementById('email-idioma').value;
+      const asunto = document.getElementById('email-asunto').value || '';
+      const contenido = document.getElementById('email-contenido').value || '';
+      return `Redacta un email profesional en ${idioma} para enviar a: ${dest}. Asunto: ${asunto}. Mensaje a transmitir: ${contenido}. El email es en nombre de la gestión del Centre Comercial Vilamarina, ubicado en Sant Joan Despí, Barcelona. Tono formal y conciso. Incluye saludo, cuerpo bien estructurado y despedida profesional. No incluyas asunto en el cuerpo del email.`;
+    }
+    if (tool === 'incidencia') {
+      const ubi = document.getElementById('inc-ubi').value || 'no especificada';
+      const tipo = document.getElementById('inc-tipo').value;
+      const desc = document.getElementById('inc-desc').value || '';
+      const medidas = document.getElementById('inc-medidas').value || 'pendiente';
+      return `Redacta un parte de incidencia formal para el Centre Comercial Vilamarina, Sant Joan Despí, Barcelona. Fecha: ${today}. Datos: Ubicación: ${ubi}. Tipo: ${tipo}. Descripción: ${desc}. Medidas tomadas: ${medidas}. Formato de documento oficial con encabezado, número de referencia (genera uno ficticio), secciones claramente diferenciadas y espacio para firma.`;
+    }
+    if (tool === 'autorizacion') {
+      const nombre = document.getElementById('aut-nombre').value || 'operario';
+      const trabajo = document.getElementById('aut-trabajo').value || 'trabajos de mantenimiento';
+      const zona = document.getElementById('aut-zona').value || 'zona indicada';
+      const fecha = document.getElementById('aut-fecha').value || 'fecha a confirmar';
+      return `Redacta una autorización formal de acceso para el Centre Comercial Vilamarina, Sant Joan Despí, Barcelona. Fecha de emisión: ${today}. Operario/empresa autorizada: ${nombre}. Trabajo a realizar: ${trabajo}. Zona de acceso: ${zona}. Fecha y horario de acceso: ${fecha}. Formato de documento oficial con número de referencia, condiciones de acceso básicas y espacio para firma de la dirección del centro.`;
+    }
+    if (tool === 'comunicado') {
+      const dest = document.getElementById('com-dest').value || 'el equipo';
+      const asunto = document.getElementById('com-asunto').value || '';
+      const contenido = document.getElementById('com-contenido').value || '';
+      const idioma = document.getElementById('com-idioma').value;
+      return `Redacta un comunicado interno en ${idioma} del Centre Comercial Vilamarina, Sant Joan Despí, Barcelona. Fecha: ${today}. Dirigido a: ${dest}. Asunto: ${asunto}. Mensaje: ${contenido}. Tono profesional y directo. Incluye encabezado con logo textual del centro, cuerpo del mensaje bien estructurado y cierre con firma de la dirección.`;
+    }
+  }
+
+  async function generar(tool) {
+    if (!apiKey) {
+      showToast('Introduce tu API key primero para usar el asistente.', true);
+      document.getElementById('apiKeyInput').focus();
+      return;
+    }
+
+    const btn = document.getElementById('btn-' + tool);
+    const resultBox = document.getElementById('result-' + tool);
+    const textEl = document.getElementById('text-' + tool);
+    const prompt = buildPrompt(tool);
+
+    const labels = { email: 'Generar email', incidencia: 'Generar parte', autorizacion: 'Generar autorización', comunicado: 'Generar comunicado' };
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Generando...';
+    resultBox.classList.add('visible');
+    textEl.textContent = '';
+
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': window.location.href,
+          'X-Title': 'Asistente Vilamarina'
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-3.3-8b-instruct:free',
+          stream: true,
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || 'Error de API');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') continue;
+            try {
+              const json = JSON.parse(data);
+              const text = json.choices?.[0]?.delta?.content;
+              if (text) textEl.textContent += text;
+            } catch {}
+          }
+        }
+      }
+
+    } catch (e) {
+      textEl.textContent = '';
+      showToast('Error: ' + e.message, true);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = `<span>✦</span> ${labels[tool]}`;
+  }
+
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast' + (isError ? ' error' : '') + ' show';
+    setTimeout(() => { t.className = 'toast' + (isError ? ' error' : ''); }, 3500);
+  }
+</script>
+</body>
+</html>
