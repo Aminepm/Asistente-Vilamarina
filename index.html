@@ -83,52 +83,72 @@
     padding: 2.5rem 1.5rem;
   }
 
-  /* API KEY BANNER */
-  .api-banner {
-    background: var(--surface);
+  /* API KEY DESPLEGABLE */
+  .api-widget {
+    margin-bottom: 2rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 2rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+    background: var(--surface);
     box-shadow: var(--shadow);
+    overflow: hidden;
   }
-  .api-banner.connected { border-color: #A7D7C0; background: var(--success-bg); }
-  .api-banner-icon { font-size: 20px; flex-shrink: 0; }
-  .api-banner-body { flex: 1; }
-  .api-banner-body label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
-  .api-banner-body input {
+  .api-widget.connected { border-color: #A7D7C0; }
+  .api-widget-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .api-widget-header:hover { background: var(--bg); }
+  .api-widget-left { display: flex; align-items: center; gap: 10px; }
+  .api-status-icon { font-size: 20px; line-height: 1; }
+  .api-widget-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .api-widget-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+  .api-chevron { font-size: 11px; color: var(--text-hint); transition: transform 0.2s; }
+  .api-chevron.open { transform: rotate(180deg); }
+  .api-widget-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+  .api-widget-body.open {
+    max-height: 200px;
+    border-top: 1px solid var(--border);
+  }
+  .api-widget-body-inner { padding: 16px 18px; }
+  .api-widget-body label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+  .api-widget-body input {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    font-size: 14px;
+    font-size: 13px;
     font-family: var(--mono);
     background: var(--bg);
     color: var(--text-primary);
     outline: none;
     transition: border-color 0.15s;
+    box-sizing: border-box;
   }
-  .api-banner-body input:focus { border-color: var(--accent); }
-  .api-banner-body .hint { font-size: 12px; color: var(--text-hint); margin-top: 5px; }
-  .api-banner-body .hint a { color: var(--accent); text-decoration: none; }
+  .api-widget-body input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.10); }
+  .api-widget-body .hint { font-size: 12px; color: var(--text-hint); margin-top: 6px; }
+  .api-widget-body .hint a { color: var(--accent); text-decoration: none; }
+  .api-widget-actions { display: flex; gap: 8px; margin-top: 10px; }
   .btn-connect {
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: var(--radius);
-    padding: 9px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: opacity 0.15s;
-    flex-shrink: 0;
+    background: var(--accent); color: white; border: none;
+    border-radius: var(--radius); padding: 8px 18px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: opacity 0.15s; font-family: var(--font);
   }
   .btn-connect:hover { opacity: 0.88; }
-  .connected-label { font-size: 14px; font-weight: 500; color: var(--success); }
+  .btn-disconnect {
+    background: transparent; color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 8px 14px; font-size: 13px; cursor: pointer;
+    font-family: var(--font); transition: background 0.15s;
+  }
+  .btn-disconnect:hover { background: var(--danger-bg); color: var(--danger); border-color: #F5C6C2; }
 
   /* PAGE TITLE */
   .page-title { margin-bottom: 1.75rem; }
@@ -326,11 +346,163 @@
     .fields-row { grid-template-columns: 1fr; }
     .api-banner { flex-direction: column; align-items: stretch; }
   }
+
+  /* LOGIN SCREEN */
+  #loginScreen {
+    display: none;
+    min-height: 100vh;
+    background: var(--bg);
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: var(--shadow-md);
+  }
+  .login-logo {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 2rem;
+  }
+  .login-logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-logo-icon svg { width: 20px; height: 20px; fill: white; }
+  .login-logo-text { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+  .login-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .login-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 1.75rem; }
+  .login-field { margin-bottom: 14px; }
+  .login-field label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 5px; }
+  .login-field input {
+    width: 100%; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; font-family: var(--font);
+    background: var(--bg); color: var(--text-primary);
+    outline: none; box-sizing: border-box;
+    transition: border-color 0.15s;
+  }
+  .login-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.10); background: var(--surface); }
+  .btn-login {
+    width: 100%; padding: 11px;
+    background: var(--accent); color: white;
+    border: none; border-radius: var(--radius);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: var(--font);
+    margin-top: 6px; transition: opacity 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-login:hover:not(:disabled) { opacity: 0.88; }
+  .btn-login:disabled { opacity: 0.45; cursor: not-allowed; }
+  .login-error {
+    font-size: 13px; color: var(--danger);
+    background: var(--danger-bg); border: 1px solid #F5C6C2;
+    border-radius: var(--radius); padding: 9px 12px;
+    margin-top: 12px; display: none;
+  }
+  .login-error.visible { display: block; }
+
+  /* USER BADGE EN HEADER */
+  .user-badge {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-secondary);
+  }
+  .user-avatar {
+    width: 28px; height: 28px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: var(--accent-text);
+  }
+  .btn-logout {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px;
+    font-size: 12px; cursor: pointer; color: var(--text-secondary);
+    font-family: var(--font); transition: background 0.12s;
+  }
+  .btn-logout:hover { background: var(--danger-bg); color: var(--danger); border-color: #F5C6C2; }
+
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZLrsJaeZvWOThEKCXPOGpce_KGj8LLSE",
+    authDomain: "villamarina-fea47.firebaseapp.com",
+    projectId: "villamarina-fea47",
+    storageBucket: "villamarina-fea47.firebasestorage.app",
+    messagingSenderId: "430193901003",
+    appId: "1:430193901003:web:814ff592a9ddab25a08a4e"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // Mapa: nombre de usuario -> email Firebase
+  const USUARIOS = {
+    'amine.a': 'amine.a@vilamarina.com',
+    'celia.b': 'celia.b@vilamarina.com',
+    'santiago.b': 'santiago.b@vilamarina.com',
+    'renzo.n': 'renzo.n@vilamarina.com'
+  };
+
+  window._fbAuth = auth;
+  window._fbSignIn = signInWithEmailAndPassword;
+  window._fbSignOut = signOut;
+  window._fbUsuarios = USUARIOS;
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appScreen').style.display = 'block';
+      // Mostrar nombre de usuario
+      const username = Object.keys(USUARIOS).find(k => USUARIOS[k] === user.email) || user.email;
+      document.getElementById('userLabel').textContent = username;
+    } else {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('appScreen').style.display = 'none';
+    }
+  });
+</script>
 </head>
 <body>
+
+<!-- PANTALLA DE LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      </div>
+      <span class="login-logo-text">Asistente Vilamarina</span>
+    </div>
+    <h2 class="login-title">Bienvenido</h2>
+    <p class="login-subtitle">Introduce tus credenciales para acceder</p>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="loginUser" placeholder="ej: amine.a" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">Entrar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div id="appScreen" style="display:none;">
 
 <header>
   <a class="logo" href="#">
@@ -339,20 +511,38 @@
     </div>
     Asistente Vilamarina
   </a>
-  <span class="header-badge">Amine</span>
+  <div class="user-badge">
+    <div class="user-avatar" id="userAvatar">A</div>
+    <span id="userLabel">usuario</span>
+    <button class="btn-logout" onclick="doLogout()">Salir</button>
+  </div>
 </header>
 
 <main>
 
-  <!-- API KEY -->
-  <div class="api-banner" id="apiBanner">
-    <span class="api-banner-icon">🔑</span>
-    <div class="api-banner-body">
-      <label for="apiKeyInput">API Key de Anthropic</label>
-      <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off" oninput="onApiKeyInput()">
-      <p class="hint">Consigue tu clave gratis en <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>. Se guarda solo en tu navegador.</p>
+  <!-- API KEY DESPLEGABLE -->
+  <div class="api-widget" id="apiWidget">
+    <div class="api-widget-header" onclick="toggleApiWidget()">
+      <div class="api-widget-left">
+        <span class="api-status-icon" id="apiStatusIcon">🔴</span>
+        <div>
+          <div class="api-widget-title" id="apiWidgetTitle">API Key · No conectada</div>
+          <div class="api-widget-subtitle" id="apiWidgetSubtitle">Haz clic para introducir tu clave de Anthropic</div>
+        </div>
+      </div>
+      <span class="api-chevron" id="apiChevron">▼</span>
     </div>
-    <button class="btn-connect" onclick="saveApiKey()">Conectar</button>
+    <div class="api-widget-body" id="apiWidgetBody">
+      <div class="api-widget-body-inner">
+        <label for="apiKeyInput">Clave API de OpenRouter</label>
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+        <p class="hint">Consigue tu clave en <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com/settings/keys</a>. Se guarda solo en tu navegador.</p>
+        <div class="api-widget-actions">
+          <button class="btn-connect" onclick="saveApiKey()">Conectar</button>
+          <button class="btn-disconnect" onclick="desconectar()">Borrar clave</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="page-title">
@@ -400,6 +590,8 @@
         <select id="email-idioma">
           <option value="español">Español</option>
           <option value="catalán">Catalán</option>
+          <option value="inglés">Inglés</option>
+          <option value="búlgaro">Búlgaro</option>
         </select>
       </div>
     </div>
@@ -567,49 +759,66 @@
 </main>
 
 <footer>
-  Asistente Vilamarina · Amine · Powered by <a href="https://ai.google.dev" target="_blank">Gemini (Google)</a>
+  Asistente Vilamarina · Amine · Powered by <a href="https://anthropic.com" target="_blank">Claude (Anthropic)</a>
 </footer>
 
 <div class="toast" id="toast"></div>
 
 <script>
-  let apiKey = localStorage.getItem('vilamarina_gemini_apikey') || '';
+  let apiKey = localStorage.getItem('vilamarina_anthropic_apikey') || '';
+  let widgetOpen = false;
 
-  function onApiKeyInput() {
-    const val = document.getElementById('apiKeyInput').value.trim();
-    if (val) {
-      document.querySelector('.btn-connect').textContent = 'Conectar';
+  function toggleApiWidget() {
+    widgetOpen = !widgetOpen;
+    document.getElementById('apiWidgetBody').classList.toggle('open', widgetOpen);
+    document.getElementById('apiChevron').classList.toggle('open', widgetOpen);
+  }
+
+  function updateApiStatus(connected) {
+    const widget = document.getElementById('apiWidget');
+    const icon = document.getElementById('apiStatusIcon');
+    const title = document.getElementById('apiWidgetTitle');
+    const subtitle = document.getElementById('apiWidgetSubtitle');
+    if (connected) {
+      widget.classList.add('connected');
+      icon.textContent = '🟢';
+      title.textContent = 'API Key · Conectada';
+      subtitle.textContent = 'Anthropic Claude activo — listo para usar';
+    } else {
+      widget.classList.remove('connected');
+      icon.textContent = '🔴';
+      title.textContent = 'API Key · No conectada';
+      subtitle.textContent = 'Haz clic para introducir tu clave de Anthropic';
     }
   }
 
   function saveApiKey() {
     const val = document.getElementById('apiKeyInput').value.trim();
-    if (!val.startsWith('AIza') && val.length < 20) {
-      showToast('La API key no parece válida. Debe empezar por AIza...', true);
+    if (!val.startsWith('sk-ant') && val.length < 20) {
+      showToast('La API key no parece válida. Debe empezar por sk-ant-...', true);
       return;
     }
     apiKey = val;
-    localStorage.setItem('vilamarina_gemini_apikey', apiKey);
-    document.getElementById('apiBanner').classList.add('connected');
-    document.getElementById('apiBanner').innerHTML = `
-      <span class="api-banner-icon">✅</span>
-      <div class="api-banner-body">
-        <span class="connected-label">API key conectada correctamente</span>
-        <p class="hint" style="margin-top:4px;">La clave está guardada en tu navegador. <a href="#" onclick="desconectar()">Cambiar clave</a></p>
-      </div>
-    `;
+    localStorage.setItem('vilamarina_anthropic_apikey', apiKey);
+    updateApiStatus(true);
+    // Cerrar desplegable
+    widgetOpen = false;
+    document.getElementById('apiWidgetBody').classList.remove('open');
+    document.getElementById('apiChevron').classList.remove('open');
     showToast('Conectado. ¡Ya puedes usar el asistente!');
   }
 
   function desconectar() {
     apiKey = '';
-    localStorage.removeItem('vilamarina_gemini_apikey');
-    location.reload();
+    localStorage.removeItem('vilamarina_anthropic_apikey');
+    document.getElementById('apiKeyInput').value = '';
+    updateApiStatus(false);
+    showToast('Clave eliminada.');
   }
 
   if (apiKey) {
     document.getElementById('apiKeyInput').value = apiKey;
-    saveApiKey();
+    updateApiStatus(true);
   }
 
   function selectTool(tool, el) {
@@ -700,12 +909,19 @@
     textEl.textContent = '';
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`, {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 1000 }
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          stream: true,
+          messages: [{ role: 'user', content: prompt }]
         })
       });
 
@@ -730,8 +946,9 @@
             if (data === '[DONE]') continue;
             try {
               const json = JSON.parse(data);
-              const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) textEl.textContent += text;
+              if (json.type === 'content_block_delta' && json.delta?.text) {
+                textEl.textContent += json.delta.text;
+              }
             } catch {}
           }
         }
@@ -752,6 +969,50 @@
     t.className = 'toast' + (isError ? ' error' : '') + ' show';
     setTimeout(() => { t.className = 'toast' + (isError ? ' error' : ''); }, 3500);
   }
+
+  async function doLogin() {
+    const userInput = document.getElementById('loginUser').value.trim().toLowerCase();
+    const pass = document.getElementById('loginPass').value;
+    const errorEl = document.getElementById('loginError');
+    const btn = document.getElementById('btnLogin');
+
+    errorEl.classList.remove('visible');
+
+    if (!userInput || !pass) {
+      errorEl.textContent = 'Introduce usuario y contraseña.';
+      errorEl.classList.add('visible');
+      return;
+    }
+
+    const email = window._fbUsuarios[userInput];
+    if (!email) {
+      errorEl.textContent = 'Usuario no reconocido.';
+      errorEl.classList.add('visible');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner" style="border-top-color:white;border-color:rgba(255,255,255,0.3)"></div> Entrando...';
+
+    try {
+      await window._fbSignIn(window._fbAuth, email, pass);
+      // onAuthStateChanged se encarga de mostrar la app
+      const initials = userInput.split('.').map(p => p[0].toUpperCase()).join('');
+      document.getElementById('userAvatar').textContent = initials;
+    } catch(e) {
+      let msg = 'Usuario o contraseña incorrectos.';
+      errorEl.textContent = msg;
+      errorEl.classList.add('visible');
+      btn.disabled = false;
+      btn.innerHTML = 'Entrar';
+    }
+  }
+
+  async function doLogout() {
+    await window._fbSignOut(window._fbAuth);
+  }
+
 </script>
+</div><!-- /appScreen -->
 </body>
 </html>
