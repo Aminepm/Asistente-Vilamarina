@@ -501,8 +501,15 @@
     'amine.a': 'amine.a@vilamarina.com',
     'celia.b': 'celia.b@vilamarina.com',
     'santiago.b': 'santiago.b@vilamarina.com',
-    'renzo.n': 'renzo.n@vilamarina.com'
+    'renzo.n': 'renzo.n@vilamarina.com',
+    'seguridad.vilamarina': 'seguridad.vilamarina@vilamarina.com'
   };
+
+  // Roles: seguridad solo puede ver parte de incidencia
+  const ROL_SEGURIDAD = ['seguridad.vilamarina'];
+
+  // Inicializar EmailJS
+  emailjs.init('m-7ryRN5ehG7Uj5yq');
 
   window._fbAuth = auth;
   window._fbSignIn = signInWithEmailAndPassword;
@@ -528,6 +535,14 @@
         document.getElementById('userLabel').textContent = username;
         const initials = username.split('.').map(p => p[0].toUpperCase()).join('');
         document.getElementById('userAvatar').textContent = initials;
+        // Aplicar rol
+        if (ROL_SEGURIDAD.includes(username)) {
+          document.querySelectorAll('.tool-card').forEach(c => c.style.display = 'none');
+          document.getElementById('tool-incidencia').style.display = 'block';
+          document.getElementById('form-incidencia').classList.add('visible');
+          document.querySelector('.page-title p').textContent = 'Registra partes de incidencia del centro.';
+        }
+        window._currentUser = username;
       }
     } else {
       document.getElementById('loginScreen').style.display = 'flex';
@@ -536,6 +551,7 @@
     }
   });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -638,7 +654,7 @@
       <h3>Email</h3>
       <p>A proveedor, operario o equipo de seguridad</p>
     </div>
-    <div class="tool-card" onclick="selectTool('incidencia', this)">
+    <div class="tool-card" id="tool-incidencia" onclick="selectTool('incidencia', this)">
       <div class="tool-icon icon-incidencia">⚠️</div>
       <h3>Parte de incidencia</h3>
       <p>Registro formal de incidencias del centro</p>
@@ -970,6 +986,42 @@
     }
   }
 
+  async function enviarEmailIncidencia(textoGenerado) {
+    const ubicacion = document.getElementById('inc-ubi').value || 'No especificada';
+    const desc = document.getElementById('inc-desc').value || '';
+    const now = new Date().toLocaleString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const usuario = window._currentUser || 'Usuario';
+
+    const destinatarios = [
+      { email: 'auxiliar.vilamarina@gbp.cat', name: 'Amine' },
+      { email: 'Santiago.Berto@cbre.com', name: 'Santiago' },
+      { email: 'Celia.Beltran@cbre.com', name: 'Celia' },
+      { email: 'Renzo.Neyra@cbre.com', name: 'Renzo' }
+    ];
+
+    const templateParams = {
+      ubicacion: ubicacion,
+      fecha: now,
+      usuario: usuario,
+      descripcion: desc,
+      texto_generado: textoGenerado
+    };
+
+    try {
+      for (const dest of destinatarios) {
+        await emailjs.send('service_gecj037', 'template_q8feuyq', {
+          ...templateParams,
+          to_email: dest.email,
+          to_name: dest.name
+        });
+      }
+      showToast('📧 Parte enviado por email al equipo.');
+    } catch(e) {
+      showToast('⚠️ Parte generado pero error al enviar email.', true);
+      console.error('EmailJS error:', e);
+    }
+  }
+
   async function generar(tool) {
     if (!apiKey) {
       showToast('Introduce tu API key primero para usar el asistente.', true);
@@ -1042,6 +1094,12 @@
 
     btn.disabled = false;
     btn.innerHTML = `<span>✦</span> ${labels[tool]}`;
+
+    // Si es parte de incidencia, enviar email automáticamente
+    if (tool === 'incidencia') {
+      const textoFinal = document.getElementById('text-incidencia').textContent;
+      if (textoFinal) await enviarEmailIncidencia(textoFinal);
+    }
   }
 
   function showToast(msg, isError = false) {
@@ -1153,6 +1211,13 @@
       document.getElementById('userLabel').textContent = username;
       const initials = username.split('.').map(p => p[0].toUpperCase()).join('');
       document.getElementById('userAvatar').textContent = initials;
+      if (ROL_SEGURIDAD.includes(username)) {
+        document.querySelectorAll('.tool-card').forEach(c => c.style.display = 'none');
+        document.getElementById('tool-incidencia').style.display = 'block';
+        document.getElementById('form-incidencia').classList.add('visible');
+        document.querySelector('.page-title p').textContent = 'Registra partes de incidencia del centro.';
+      }
+      window._currentUser = username;
       showToast('Contraseña actualizada. ¡Bienvenido!');
     } catch(e) {
       errorEl.textContent = 'Error al actualizar la contraseña. Vuelve a iniciar sesión e inténtalo de nuevo.';
