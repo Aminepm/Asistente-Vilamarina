@@ -482,7 +482,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBZLrsJaeZvWOThEKCXPOGpce_KGj8LLSE",
@@ -515,6 +515,8 @@
   window._fbSignIn = signInWithEmailAndPassword;
   window._fbSignOut = signOut;
   window._fbUpdatePassword = updatePassword;
+  window._fbReauth = reauthenticateWithCredential;
+  window._fbEmailProvider = EmailAuthProvider;
   window._fbUsuarios = USUARIOS;
 
   onAuthStateChanged(auth, (user) => {
@@ -1135,6 +1137,8 @@
 
     try {
       await window._fbSignIn(window._fbAuth, email, pass);
+      // Guardar pass temporalmente para re-autenticar si es primer login
+      window._lastLoginPass = pass;
       // onAuthStateChanged se encarga de mostrar la app
       const initials = userInput.split('.').map(p => p[0].toUpperCase()).join('');
       document.getElementById('userAvatar').textContent = initials;
@@ -1201,9 +1205,16 @@
 
     try {
       const user = window._fbAuth.currentUser;
+      // Re-autenticar antes de cambiar contraseña (requerido por Firebase)
+      const currentPass = window._lastLoginPass || '';
+      if (currentPass) {
+        const credential = window._fbEmailProvider.credential(user.email, currentPass);
+        await window._fbReauth(user, credential);
+      }
       await window._fbUpdatePassword(user, pass1);
       // Marcar como contraseña cambiada
       localStorage.setItem('vilamarina_firstlogin_' + user.uid, '1');
+      window._lastLoginPass = null;
       // Mostrar app
       const username = Object.keys(window._fbUsuarios).find(k => window._fbUsuarios[k] === user.email) || user.email;
       document.getElementById('changePassScreen').style.display = 'none';
