@@ -519,25 +519,29 @@
   window._fbEmailProvider = EmailAuthProvider;
   window._fbUsuarios = USUARIOS;
 
+  // Esperar a que el DOM esté listo antes de manipularlo
+  function mostrarPantalla(pantalla) {
+    document.getElementById('loginScreen').style.display = pantalla === 'login' ? 'flex' : 'none';
+    document.getElementById('changePassScreen').style.display = pantalla === 'changepass' ? 'flex' : 'none';
+    document.getElementById('appScreen').style.display = pantalla === 'app' ? 'block' : 'none';
+  }
+
+  // Ocultar todo hasta que Firebase confirme el estado
+  mostrarPantalla('none');
+
   onAuthStateChanged(auth, (user) => {
     if (user) {
       const username = Object.keys(USUARIOS).find(k => USUARIOS[k] === user.email) || user.email;
       const firstLoginKey = 'vilamarina_firstlogin_' + user.uid;
       const hasChangedPass = localStorage.getItem(firstLoginKey);
 
-      document.getElementById('loginScreen').style.display = 'none';
-
       if (!hasChangedPass) {
-        // Primer login: mostrar pantalla de cambio de contraseña
-        document.getElementById('changePassScreen').style.display = 'flex';
-        document.getElementById('appScreen').style.display = 'none';
+        mostrarPantalla('changepass');
       } else {
-        document.getElementById('changePassScreen').style.display = 'none';
-        document.getElementById('appScreen').style.display = 'block';
+        mostrarPantalla('app');
         document.getElementById('userLabel').textContent = username;
         const initials = username.split('.').map(p => p[0].toUpperCase()).join('');
         document.getElementById('userAvatar').textContent = initials;
-        // Aplicar rol
         if (ROL_SEGURIDAD.includes(username)) {
           document.querySelectorAll('.tool-card').forEach(c => c.style.display = 'none');
           document.getElementById('tool-incidencia').style.display = 'block';
@@ -547,9 +551,7 @@
         window._currentUser = username;
       }
     } else {
-      document.getElementById('loginScreen').style.display = 'flex';
-      document.getElementById('changePassScreen').style.display = 'none';
-      document.getElementById('appScreen').style.display = 'none';
+      mostrarPantalla('login');
     }
   });
 </script>
