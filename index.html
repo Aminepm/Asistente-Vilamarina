@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF Pro Fix</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+body{font-family:Arial,sans-serif;background:#111;color:#fff;padding:20px}
+button{padding:10px;margin:5px}
+#log{margin-top:20px;background:#222;padding:10px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h2>PDF Pro Fix</h2>
+
+<input type="file" id="pdfInput" accept=".pdf" multiple>
+<br><br>
+
+<button onclick="mergePDFs()">Unificar PDFs</button>
+<button onclick="compressPDF()">Comprimir PDF</button>
+
+<div id="log"></div>
+
+<script>
+const log = msg => document.getElementById("log").textContent += msg + "\\n";
+
+async function mergePDFs(){
+    const files = document.getElementById('pdfInput').files;
+
+    if(files.length < 2){
+        alert('Selecciona al menos 2 PDFs');
+        return;
+    }
+
+    const merged = await PDFLib.PDFDocument.create();
+
+    for(const file of files){
+        const bytes = await file.arrayBuffer();
+        const pdf = await PDFLib.PDFDocument.load(bytes,{ignoreEncryption:true});
+
+        const pages = await merged.copyPages(pdf,pdf.getPageIndices());
+        pages.forEach(p=>merged.addPage(p));
+    }
+
+    const out = await merged.save();
+    download(out,'unificado.pdf');
+
+    log('PDFs unificados correctamente');
+}
+
+async function compressPDF(){
+
+    const file = document.getElementById('pdfInput').files[0];
+
+    if(!file){
+        alert('Selecciona un PDF');
+        return;
+    }
+
+    const bytes = await file.arrayBuffer();
+
+    const pdf = await PDFLib.PDFDocument.load(bytes,{ignoreEncryption:true});
+
+    const out = await pdf.save({
+        useObjectStreams:true,
+        addDefaultPage:false
+    });
+
+    download(out,'comprimido.pdf');
+
+    log('Compresión básica completada');
+}
+
+function download(bytes,name){
+    const blob = new Blob([bytes],{type:'application/pdf'});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+
+window.onload = ()=>{
+    if(typeof PDFLib === 'undefined'){
+        log('ERROR: PDFLib no cargó. Comprueba Internet o CDN.');
+    }else{
+        log('PDFLib cargado correctamente.');
+    }
+}
+</script>
+</body>
+</html>
