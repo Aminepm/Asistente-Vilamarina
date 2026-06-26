@@ -1,280 +1,825 @@
-cat << 'EOF' > /home/claude/generar_pdf.py
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Incidències de Seguretat — Vilamarina</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F4F5F7; color: #1A1A2E; min-height: 100vh; }
+.topbar { background: #0F1B2D; padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.topbar-logo { width: 30px; height: 30px; background: #F59E0B; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.topbar-logo svg { width: 17px; height: 17px; stroke: #0F1B2D; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.topbar-title { color: #E8EDF2; font-size: 15px; font-weight: 500; }
+.topbar-sub { color: #6B7F96; font-size: 12px; margin-top: 1px; }
+.topbar-nav { display: flex; gap: 6px; }
+.nav-btn { padding: 7px 14px; font-size: 13px; border-radius: 7px; border: none; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+.nav-btn.active { background: #F59E0B; color: #0F1B2D; }
+.nav-btn:not(.active) { background: transparent; color: #7A8FA6; }
+.nav-btn:not(.active):hover { background: #1E2D3D; color: #E8EDF2; }
+.main { max-width: 1280px; margin: 0 auto; padding: 28px 32px; }
+.view { display: none; }
+.view.active { display: block; }
+.page-header { margin-bottom: 22px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.page-header h1 { font-size: 21px; font-weight: 600; color: #0F1B2D; }
+.page-header p { font-size: 13px; color: #5A6B7B; margin-top: 3px; }
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 22px; }
+.metric { background: #fff; border-radius: 10px; padding: 14px 16px; border: 1px solid #E2E6EA; }
+.metric-label { font-size: 11px; color: #7A8FA6; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.metric-value { font-size: 26px; font-weight: 600; color: #0F1B2D; }
+.metric-value.red { color: #C0392B; }
+.metric-value.amber { color: #D4860A; }
+.metric-value.blue { color: #1A6BB5; }
+.metric-value.green { color: #1E8449; }
+.panel { background: #fff; border-radius: 12px; border: 1px solid #E2E6EA; overflow: hidden; }
+.panel-header { padding: 14px 18px; border-bottom: 1px solid #E2E6EA; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.filters input, .filters select { font-size: 13px; padding: 7px 11px; border: 1px solid #D1D9E0; border-radius: 7px; background: #F8F9FA; color: #1A1A2E; outline: none; }
+.filters input:focus, .filters select:focus { border-color: #F59E0B; background: #fff; }
+.filters input { min-width: 200px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 15px; font-size: 13px; font-weight: 500; border-radius: 8px; border: none; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.btn-primary { background: #0F1B2D; color: #fff; }
+.btn-primary:hover { background: #1E2D3D; }
+.btn-accent { background: #F59E0B; color: #0F1B2D; }
+.btn-accent:hover { background: #D4860A; color: #fff; }
+.btn-outline { background: #fff; color: #5A6B7B; border: 1px solid #D1D9E0; }
+.btn-outline:hover { background: #F8F9FA; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { background: #F8F9FA; }
+th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #7A8FA6; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #E2E6EA; white-space: nowrap; }
+td { padding: 11px 14px; border-bottom: 1px solid #F0F2F5; color: #2C3E50; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #FAFBFC; }
+.td-muted { color: #7A8FA6; font-size: 12px; }
+.td-actions { display: flex; gap: 6px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.badge-critica { background: #FDECEC; color: #922B21; } .badge-critica::before { background: #E74C3C; }
+.badge-alta { background: #FEF3E2; color: #A04000; } .badge-alta::before { background: #F39C12; }
+.badge-media { background: #EBF5FB; color: #1A5276; } .badge-media::before { background: #2E86C1; }
+.badge-baja { background: #EAFAF1; color: #1E8449; } .badge-baja::before { background: #27AE60; }
+.badge-obert { background: #FEF3E2; color: #A04000; } .badge-obert::before { background: #F39C12; }
+.badge-tancat { background: #EAFAF1; color: #1E8449; } .badge-tancat::before { background: #27AE60; }
+.badge-cat { background: #F0F2F5; color: #4A5568; border: 1px solid #D1D9E0; }
+.badge-cat::before { display: none; }
+.row-critica td:first-child { border-left: 3px solid #E74C3C; padding-left: 11px; }
+.row-alta td:first-child { border-left: 3px solid #F39C12; padding-left: 11px; }
+.row-media td:first-child { border-left: 3px solid #2E86C1; padding-left: 11px; }
+.row-baja td:first-child { border-left: 3px solid #27AE60; padding-left: 11px; }
+.empty-row td { text-align: center; padding: 48px; color: #7A8FA6; font-size: 13px; }
+.empty-icon { font-size: 32px; margin-bottom: 8px; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,27,45,0.6); z-index: 200; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 14px; width: 680px; max-width: 100%; box-shadow: 0 24px 64px rgba(0,0,0,0.22); }
+.modal-header { padding: 20px 26px 16px; border-bottom: 1px solid #E2E6EA; display: flex; align-items: center; justify-content: space-between; }
+.modal-header h2 { font-size: 17px; font-weight: 600; color: #0F1B2D; }
+.modal-close { width: 30px; height: 30px; border: none; background: #F0F2F5; border-radius: 6px; cursor: pointer; font-size: 16px; color: #5A6B7B; display: flex; align-items: center; justify-content: center; }
+.modal-close:hover { background: #E2E6EA; }
+.modal-body { padding: 20px 26px; max-height: 72vh; overflow-y: auto; }
+.modal-footer { padding: 16px 26px; border-top: 1px solid #E2E6EA; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.form-section { margin-bottom: 20px; }
+.form-section-title { font-size: 11px; font-weight: 700; color: #7A8FA6; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #F0F2F5; }
+.form-row { display: grid; gap: 12px; margin-bottom: 12px; }
+.form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 600; color: #5A6B7B; }
+.form-group input, .form-group select, .form-group textarea { font-size: 13px; padding: 8px 11px; border: 1px solid #D1D9E0; border-radius: 7px; background: #F8F9FA; color: #1A1A2E; outline: none; font-family: inherit; transition: border-color 0.15s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #F59E0B; background: #fff; }
+.form-group textarea { resize: vertical; min-height: 72px; }
+.radio-group { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 2px; }
+.radio-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 400; color: #2C3E50; cursor: pointer; }
+.detail-section { margin-bottom: 18px; }
+.detail-section-title { font-size: 11px; font-weight: 700; color: #7A8FA6; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #F0F2F5; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.detail-item .detail-label { font-size: 11px; color: #7A8FA6; font-weight: 600; margin-bottom: 2px; }
+.detail-item .detail-value { font-size: 13px; color: #1A1A2E; }
+.detail-full { grid-column: 1 / -1; }
+.correo-box { background: #F8F9FA; border: 1px solid #E2E6EA; border-radius: 8px; padding: 12px; font-size: 12px; color: #4A5568; white-space: pre-wrap; max-height: 200px; overflow-y: auto; line-height: 1.6; font-family: monospace; }
+.img-ref-box { background: #FFFBF0; border: 1px solid #F59E0B44; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #7A4F00; }
+.img-ref-box strong { display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #A04000; }
+.backup-panel { background: #fff; border-radius: 12px; border: 1px solid #E2E6EA; padding: 24px; margin-bottom: 16px; }
+.backup-panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.backup-panel p { font-size: 13px; color: #5A6B7B; margin-bottom: 16px; }
+.backup-months { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.month-card { border: 1px solid #E2E6EA; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+.month-card-info strong { font-size: 14px; color: #0F1B2D; display: block; }
+.month-card-info span { font-size: 12px; color: #7A8FA6; }
+.pdf-banner { background: #FFFBF0; border: 1px solid #F59E0B55; border-radius: 10px; padding: 16px 20px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pdf-banner-text strong { font-size: 14px; color: #0F1B2D; display: block; margin-bottom: 2px; }
+.pdf-banner-text span { font-size: 12px; color: #7A8FA6; }
+@media (max-width: 768px) {
+  .main { padding: 16px; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .backup-months { grid-template-columns: 1fr; }
+  .topbar { flex-direction: column; gap: 10px; }
+}
+</style>
+</head>
+<body>
 
-OUTPUT = "/mnt/user-data/outputs/plantilla_afectat_vilamarina.pdf"
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5"/></svg>
+    </div>
+    <div>
+      <div class="topbar-title">Vilamarina — Gestió d'Incidències</div>
+      <div class="topbar-sub">Oficina de Gerència</div>
+    </div>
+  </div>
+  <div class="topbar-nav">
+    <button class="nav-btn active" onclick="canviarVista('incidencies', this)">Incidències</button>
+    <button class="nav-btn" onclick="canviarVista('afectats', this)">Afectats</button>
+    <button class="nav-btn" onclick="canviarVista('backup', this)">Còpies de seguretat</button>
+  </div>
+</div>
 
-doc = SimpleDocTemplate(
-    OUTPUT,
-    pagesize=A4,
-    leftMargin=2*cm,
-    rightMargin=2*cm,
-    topMargin=2*cm,
-    bottomMargin=2*cm,
-)
+<div class="main">
 
-w = A4[0] - 4*cm
-BLAU = colors.HexColor("#0F1B2D")
-GROC = colors.HexColor("#F59E0B")
-GRIS_CLAR = colors.HexColor("#F4F5F7")
-GRIS_LINIA = colors.HexColor("#D1D9E0")
-BLANC = colors.white
+  <!-- INCIDÈNCIES -->
+  <div class="view active" id="view-incidencies">
+    <div class="page-header">
+      <div>
+        <h1>Registre d'Incidències de Seguretat</h1>
+        <p>Classificació per gravetat i categoria · Totes les incidències queden registrades amb data, hora i mesures adoptades</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-accent" onclick="obrirModalNova()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova incidència
+        </button>
+        <button class="btn btn-primary" onclick="exportarCSV()">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Exportar Excel
+        </button>
+      </div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="m-total">0</div></div>
+      <div class="metric"><div class="metric-label">Crítiques</div><div class="metric-value red" id="m-critica">0</div></div>
+      <div class="metric"><div class="metric-label">Altes</div><div class="metric-value amber" id="m-alta">0</div></div>
+      <div class="metric"><div class="metric-label">Obertes</div><div class="metric-value blue" id="m-obertes">0</div></div>
+      <div class="metric"><div class="metric-label">Aquest mes</div><div class="metric-value green" id="m-mes">0</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="filters">
+          <input type="text" id="f-buscar" placeholder="Cercar..." oninput="renderTabla()" />
+          <select id="f-gravedad" onchange="renderTabla()">
+            <option value="">Totes les gravetat</option>
+            <option value="Crítica">Crítica</option>
+            <option value="Alta">Alta</option>
+            <option value="Media">Mitja</option>
+            <option value="Baja">Baixa</option>
+          </select>
+          <select id="f-categoria" onchange="renderTabla()">
+            <option value="">Totes les categories</option>
+            <option value="Robatori">Robatori</option>
+            <option value="Danys">Danys</option>
+            <option value="Accident Parking">Accident Parking</option>
+            <option value="Accident CC">Accident CC</option>
+            <option value="Incidència Baixa">Incidència Baixa</option>
+          </select>
+          <select id="f-estat" onchange="renderTabla()">
+            <option value="">Tots els estats</option>
+            <option value="Obert">Obert</option>
+            <option value="Tancat">Tancat</option>
+          </select>
+          <select id="f-mes" onchange="renderTabla()">
+            <option value="">Tots els mesos</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:85px">Data</th>
+              <th style="width:60px">Hora</th>
+              <th style="width:90px">Gravetat</th>
+              <th style="width:130px">Categoria</th>
+              <th style="width:130px">Ubicació</th>
+              <th>Resum</th>
+              <th style="width:80px">Estat</th>
+              <th style="width:80px">Accions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-styles = getSampleStyleSheet()
+  <!-- AFECTATS -->
+  <div class="view" id="view-afectats">
+    <div class="page-header">
+      <div>
+        <h1>Afectats / Clients</h1>
+        <p>Fitxes de dades per a obertura de parts d'assegurança</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline" onclick="descarregarPlantillaPDF()">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Descarregar plantilla PDF
+        </button>
+        <button class="btn btn-accent" onclick="obrirModalAfectat()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nou afectat
+        </button>
+      </div>
+    </div>
+    <div class="pdf-banner">
+      <div class="pdf-banner-text">
+        <strong>Plantilla imprimible per a seguretat</strong>
+        <span>Descarrega el PDF, imprimeix-lo i lliura'l al vigilant perquè l'empleni manualment amb les dades del client afectat.</span>
+      </div>
+      <button class="btn btn-accent" onclick="descarregarPlantillaPDF()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Descarregar PDF
+      </button>
+    </div>
+    <div class="panel">
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Nom complet</th>
+              <th>DNI/NIE</th>
+              <th>Telèfon</th>
+              <th>Incidència vinculada</th>
+              <th>Assist. mèdica</th>
+              <th>Consentiment</th>
+              <th style="width:80px">Accions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-afectats"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-def estil(nom, base='Normal', **kwargs):
-    return ParagraphStyle(nom, parent=styles[base], **kwargs)
+  <!-- BACKUP -->
+  <div class="view" id="view-backup">
+    <div class="page-header">
+      <div>
+        <h1>Còpies de seguretat</h1>
+        <p>Genera i descarrega el registre complet de cada mes</p>
+      </div>
+    </div>
+    <div class="backup-panel">
+      <h3>Backup mensual</h3>
+      <p>Cada arxiu inclou totes les incidències del mes, els resums, els correus originals i les dades dels afectats vinculats.</p>
+      <div class="backup-months" id="backup-months">
+        <div style="color:#7A8FA6;font-size:13px;padding:12px">Encara no hi ha incidències registrades.</div>
+      </div>
+    </div>
+    <div class="backup-panel">
+      <h3>Backup complet</h3>
+      <p>Descarrega totes les incidències de tots els mesos en un sol arxiu.</p>
+      <button class="btn btn-primary" onclick="exportarBackupComplet()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Descarregar backup complet
+      </button>
+    </div>
+  </div>
 
-titol_doc = estil('TitolDoc', fontSize=15, fontName='Helvetica-Bold', textColor=BLANC, spaceAfter=0)
-subtitol_doc = estil('SubtitolDoc', fontSize=9, fontName='Helvetica', textColor=colors.HexColor("#B0BEC5"), spaceAfter=0)
-seccio = estil('Seccio', fontSize=8, fontName='Helvetica-Bold', textColor=BLAU, spaceBefore=12, spaceAfter=4, textTransform='uppercase', letterSpacing=0.5)
-camp_label = estil('CampLabel', fontSize=7.5, fontName='Helvetica-Bold', textColor=colors.HexColor("#5A6B7B"))
-nota_peu = estil('NotaPeu', fontSize=7, fontName='Helvetica', textColor=colors.HexColor("#9AA5B4"), alignment=TA_CENTER)
+</div>
 
-story = []
+<!-- MODAL NOVA INCIDÈNCIA -->
+<div class="modal-overlay" id="modal-nova" onclick="tancarModalFons(event,'modal-nova')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Nova incidència</h2>
+      <button class="modal-close" onclick="tancarModal('modal-nova')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-section-title">Dades generals</div>
+        <div class="form-row cols-3">
+          <div class="form-group"><label>Data *</label><input type="date" id="n-fecha" /></div>
+          <div class="form-group"><label>Hora *</label><input type="time" id="n-hora" /></div>
+          <div class="form-group"><label>Vigilant responsable</label><input type="text" id="n-vigilant" placeholder="Nom del vigilant" /></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label>Gravetat *</label>
+            <select id="n-gravedad">
+              <option value="Crítica">Crítica</option>
+              <option value="Alta">Alta</option>
+              <option value="Media" selected>Mitja</option>
+              <option value="Baja">Baixa</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Categoria *</label>
+            <select id="n-categoria">
+              <option value="Robatori">Robatori</option>
+              <option value="Danys">Danys</option>
+              <option value="Accident Parking">Accident Parking</option>
+              <option value="Accident CC">Accident CC</option>
+              <option value="Incidència Baixa">Incidència Baixa</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Ubicació *</label><input type="text" id="n-ubicacion" placeholder="Zona, planta, botiga..." /></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Descripció i mesures</div>
+        <div class="form-row">
+          <div class="form-group"><label>Descripció de la incidència *</label><textarea id="n-descripcion" placeholder="Descriu els fets de manera clara i objectiva..."></textarea></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Resum (editable)</label><textarea id="n-resum" placeholder="Resum breu de la incidència per a la taula principal..."></textarea></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Mesures adoptades</label><textarea id="n-accion" placeholder="Actuació del vigilant, avís a emergències, policia..." style="min-height:56px"></textarea></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Correu original</div>
+        <div class="form-row">
+          <div class="form-group"><label>Enganxa aquí el text del correu rebut</label><textarea id="n-correo" placeholder="Copia i enganxa el contingut del correu de seguretat..." style="min-height:90px;font-family:monospace;font-size:12px"></textarea></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Imatges / Vídeos de seguretat</div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Nom de la carpeta</label><input type="text" id="n-img-carpeta" placeholder="Ex: INC_20250620_001" /></div>
+          <div class="form-group"><label>Ubicació / Ruta</label><input type="text" id="n-img-ruta" placeholder="Ex: \\servidor\seguretat\2025\juny\" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Observacions sobre les imatges</label><input type="text" id="n-img-obs" placeholder="Ex: 3 arxius MP4, càmera entrada principal" /></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Estat</div>
+        <div class="radio-group">
+          <label><input type="radio" name="n-estat" value="Obert" checked /> Obert</label>
+          <label><input type="radio" name="n-estat" value="Tancat" /> Tancat</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="generarResum()">✦ Generar resum</button>
+      <button class="btn btn-outline" onclick="tancarModal('modal-nova')">Cancel·lar</button>
+      <button class="btn btn-accent" onclick="guardarIncidencia()">Guardar incidència</button>
+    </div>
+  </div>
+</div>
 
-# --- CAPÇALERA ---
-header_data = [[
-    Paragraph("FITXA D'AFECTAT / CLIENT", titol_doc),
-    Paragraph("Barna Porters S.L. · Centre Comercial Vilamarina", subtitol_doc),
-]]
-header_table = Table(header_data, colWidths=[w])
-header_table.setStyle(TableStyle([
-    ('BACKGROUND', (0,0), (-1,-1), BLAU),
-    ('LEFTPADDING', (0,0), (-1,-1), 16),
-    ('RIGHTPADDING', (0,0), (-1,-1), 16),
-    ('TOPPADDING', (0,0), (-1,-1), 14),
-    ('BOTTOMPADDING', (0,0), (-1,-1), 14),
-    ('ROUNDEDCORNERS', [6,6,6,6]),
-]))
-story.append(header_table)
-story.append(Spacer(1, 10))
+<!-- MODAL DETALL INCIDÈNCIA -->
+<div class="modal-overlay" id="modal-detall" onclick="tancarModalFons(event,'modal-detall')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="detall-titol">Detall</h2>
+      <button class="modal-close" onclick="tancarModal('modal-detall')">✕</button>
+    </div>
+    <div class="modal-body" id="detall-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="descarregarCorreo()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Descarregar correu
+      </button>
+      <button class="btn btn-outline" onclick="tancarModal('modal-detall')">Tancar</button>
+      <button class="btn btn-accent" id="btn-toggle-estat" onclick="toggleEstat()">Marcar com a tancat</button>
+    </div>
+  </div>
+</div>
 
-# Franja groga d'avís
-avis_data = [[ Paragraph("Document per emplenar manualment per l'equip de seguretat · Retornar a l'oficina de gerència", estil('Avis', fontSize=7.5, fontName='Helvetica-Bold', textColor=BLAU, alignment=TA_CENTER)) ]]
-avis_table = Table(avis_data, colWidths=[w])
-avis_table.setStyle(TableStyle([
-    ('BACKGROUND', (0,0), (-1,-1), GROC),
-    ('TOPPADDING', (0,0), (-1,-1), 6),
-    ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-    ('ROUNDEDCORNERS', [4,4,4,4]),
-]))
-story.append(avis_table)
-story.append(Spacer(1, 14))
+<!-- MODAL NOU AFECTAT -->
+<div class="modal-overlay" id="modal-afectat" onclick="tancarModalFons(event,'modal-afectat')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Fitxa d'afectat / client</h2>
+      <button class="modal-close" onclick="tancarModal('modal-afectat')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-section-title">Dades personals</div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Nom complet *</label><input type="text" id="a-nom" placeholder="Nom i cognoms" /></div>
+          <div class="form-group"><label>DNI / NIE / Passaport *</label><input type="text" id="a-dni" placeholder="00000000A" /></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Data de naixement</label><input type="date" id="a-naix" /></div>
+          <div class="form-group"><label>Telèfon *</label><input type="tel" id="a-tel" placeholder="6XX XXX XXX" /></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Correu electrònic</label><input type="email" id="a-email" placeholder="exemple@correu.com" /></div>
+          <div class="form-group"><label>Adreça completa</label><input type="text" id="a-adreca" placeholder="Carrer, número, CP, població" /></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Dades de la incidència</div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Incidència vinculada</label><select id="a-incidencia"></select></div>
+          <div class="form-group"><label>Va requerir assistència mèdica?</label><select id="a-medica"><option value="No">No</option><option value="Sí">Sí</option></select></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Centre mèdic / Hospital</label><input type="text" id="a-hospital" placeholder="On va ser atès" /></div>
+          <div class="form-group"><label>Nº de part mèdic</label><input type="text" id="a-part-medic" placeholder="Referència del part" /></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Declaració de l'afectat</div>
+        <div class="form-row">
+          <div class="form-group"><label>Descripció dels fets (versió de l'afectat)</label><textarea id="a-declaracio" placeholder="El que declara el propi client sobre el que va ocórrer..."></textarea></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Signa consentiment de dades?</label><select id="a-consentiment"><option value="Sí">Sí</option><option value="No">No</option><option value="Pendent">Pendent</option></select></div>
+          <div class="form-group"><label>Hi ha testimonis?</label><select id="a-testimonis" onchange="toggleTestimoni()"><option value="No">No</option><option value="Sí">Sí</option></select></div>
+        </div>
+        <div class="form-row cols-2" id="bloc-testimoni" style="display:none">
+          <div class="form-group"><label>Nom del testimoni</label><input type="text" id="a-test-nom" placeholder="Nom complet" /></div>
+          <div class="form-group"><label>Telèfon del testimoni</label><input type="tel" id="a-test-tel" placeholder="6XX XXX XXX" /></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="tancarModal('modal-afectat')">Cancel·lar</button>
+      <button class="btn btn-accent" onclick="guardarAfectat()">Guardar fitxa</button>
+    </div>
+  </div>
+</div>
 
-def linia_camp(label, amplada=None):
-    amplada = amplada or w - 0.4*cm
-    data = [
-        [Paragraph(label, camp_label), ''],
-    ]
-    t = Table(data, colWidths=[amplada * 0.30, amplada * 0.70])
-    t.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
-        ('LINEBELOW', (1,0), (1,0), 0.5, GRIS_LINIA),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-    ]))
-    return t
+<!-- MODAL DETALL AFECTAT -->
+<div class="modal-overlay" id="modal-detall-afectat" onclick="tancarModalFons(event,'modal-detall-afectat')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="da-titol">Fitxa d'afectat</h2>
+      <button class="modal-close" onclick="tancarModal('modal-detall-afectat')">✕</button>
+    </div>
+    <div class="modal-body" id="da-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="descarregarFitxaAfectat()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Descarregar fitxa
+      </button>
+      <button class="btn btn-outline" onclick="tancarModal('modal-detall-afectat')">Tancar</button>
+    </div>
+  </div>
+</div>
 
-def camps_fila(*parells):
-    # parells = [(label, proporcio), ...]
-    total = sum(p[1] for p in parells)
-    cols_data = []
-    col_widths = []
-    espai = 0.3*cm
-    n = len(parells)
-    espai_total = espai * (n-1)
-    ample_util = w - 0.4*cm - espai_total
-    for label, prop in parells:
-        ample = ample_util * (prop / total)
-        col_widths.append(ample * 0.35)
-        col_widths.append(ample * 0.65)
-        cols_data.extend([Paragraph(label, camp_label), ''])
-    # afegir espais entre parells
-    finals_data = []
-    finals_widths = []
-    for i, (label, prop) in enumerate(parells):
-        finals_data.extend([Paragraph(label, camp_label), ''])
-        finals_widths.extend([col_widths[i*2], col_widths[i*2+1]])
-        if i < n-1:
-            finals_data.extend([''])
-            finals_widths.append(espai)
-    t = Table([finals_data], colWidths=finals_widths)
-    lines = []
-    col = 0
-    for i, (label, prop) in enumerate(parells):
-        label_col = col
-        value_col = col + 1
-        lines.append(('LINEBELOW', (value_col,0), (value_col,0), 0.5, GRIS_LINIA))
-        col += 2
-        if i < n-1:
-            col += 1  # espai
-    t.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-    ] + lines))
-    return t
+<script>
+let incidencies = [];
+let afectats = [];
+let nextId = 1;
+let nextAfectatId = 1;
+let incidenciaDetallActual = null;
+let afectatDetallActual = null;
 
-def seccio_titol(text):
-    data = [[Paragraph(text, estil('SecT', fontSize=8, fontName='Helvetica-Bold', textColor=BLANC, spaceBefore=0, spaceAfter=0))]]
-    t = Table(data, colWidths=[w])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), BLAU),
-        ('LEFTPADDING', (0,0), (-1,-1), 10),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-    ]))
-    return t
+function formatData(f) { return f ? f.split("-").reverse().join("/") : "—"; }
+function getMesActual() { return new Date().toISOString().slice(0,7); }
+function badgeGravClass(g) { return {"Crítica":"badge-critica","Alta":"badge-alta","Media":"badge-media","Baja":"badge-baja"}[g]||""; }
+function badgeGravLabel(g) { return {"Crítica":"Crítica","Alta":"Alta","Media":"Mitja","Baja":"Baixa"}[g]||g; }
+function rowClass(g) { return {"Crítica":"row-critica","Alta":"row-alta","Media":"row-media","Baja":"row-baja"}[g]||""; }
 
-def caixa_gran(label, altura=1.8*cm):
-    data_label = [[Paragraph(label, camp_label)]]
-    t_label = Table(data_label, colWidths=[w])
-    t_label.setStyle(TableStyle([
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-    ]))
-    data_box = [['']]
-    t_box = Table(data_box, colWidths=[w - 0.2*cm], rowHeights=[altura])
-    t_box.setStyle(TableStyle([
-        ('BOX', (0,0), (-1,-1), 0.5, GRIS_LINIA),
-        ('BACKGROUND', (0,0), (-1,-1), GRIS_CLAR),
-        ('TOPPADDING', (0,0), (-1,-1), 0),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-    ]))
-    return [t_label, t_box, Spacer(1, 4)]
+function canviarVista(vista, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + vista).classList.add('active');
+  btn.classList.add('active');
+  if (vista === 'afectats') renderAfectats();
+  if (vista === 'backup') renderBackup();
+}
 
-def checkbox_fila(label, opcions):
-    items = "    ".join(f"☐  {o}" for o in opcions)
-    data = [[Paragraph(f"<b>{label}</b>", camp_label), Paragraph(items, estil('chk', fontSize=9, fontName='Helvetica', textColor=BLAU))]]
-    t = Table(data, colWidths=[w*0.30, w*0.70])
-    t.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-    ]))
-    return t
+function omplirFiltresMesos() {
+  const mesos = [...new Set(incidencies.map(i => i.fecha.slice(0,7)))].sort().reverse();
+  const sel = document.getElementById("f-mes");
+  sel.innerHTML = '<option value="">Tots els mesos</option>';
+  const noms = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
+  mesos.forEach(m => {
+    const [y, mo] = m.split("-");
+    sel.innerHTML += `<option value="${m}">${noms[parseInt(mo)-1]} ${y}</option>`;
+  });
+}
 
-# ===== SECCIÓ 1: DADES PERSONALS =====
-story.append(seccio_titol("1. DADES PERSONALS DE L'AFECTAT"))
-story.append(Spacer(1, 8))
-story.append(linia_camp("Nom complet"))
-story.append(Spacer(1, 6))
-story.append(camps_fila(("DNI / NIE / Passaport", 1), ("Data de naixement", 1), ("Telèfon", 1)))
-story.append(Spacer(1, 6))
-story.append(linia_camp("Correu electrònic"))
-story.append(Spacer(1, 6))
-story.append(linia_camp("Adreça completa (carrer, núm., CP, població)"))
-story.append(Spacer(1, 14))
+function filtrar() {
+  const buscar = document.getElementById("f-buscar").value.toLowerCase();
+  const grav = document.getElementById("f-gravedad").value;
+  const cat = document.getElementById("f-categoria").value;
+  const estat = document.getElementById("f-estat").value;
+  const mes = document.getElementById("f-mes").value;
+  return incidencies.filter(d =>
+    (!buscar || d.descripcion.toLowerCase().includes(buscar) || d.ubicacion.toLowerCase().includes(buscar) || (d.resum||"").toLowerCase().includes(buscar))
+    && (!grav || d.gravedad === grav)
+    && (!cat || d.categoria === cat)
+    && (!estat || d.estat === estat)
+    && (!mes || d.fecha.startsWith(mes))
+  );
+}
 
-# ===== SECCIÓ 2: DADES DE LA INCIDÈNCIA =====
-story.append(seccio_titol("2. DADES DE LA INCIDÈNCIA"))
-story.append(Spacer(1, 8))
-story.append(camps_fila(("Data de la incidència", 1), ("Hora", 1), ("Ubicació al CC", 2)))
-story.append(Spacer(1, 6))
-story.append(checkbox_fila("Va requerir assistència mèdica?", ["Sí", "No"]))
-story.append(Spacer(1, 6))
-story.append(camps_fila(("Centre mèdic / Hospital", 2), ("Nº part mèdic", 1)))
-story.append(Spacer(1, 6))
-story.append(camps_fila(("Vigilant responsable", 1), ("Nº incident intern", 1)))
-story.append(Spacer(1, 14))
+function renderTabla() {
+  const filtrats = filtrar();
+  const tbody = document.getElementById("tbody");
+  if (!filtrats.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📋</div>${incidencies.length === 0 ? "Encara no hi ha incidències registrades.<br><small>Fes clic a <strong>Nova incidència</strong> per afegir-ne una.</small>" : "Cap incidència coincideix amb els filtres seleccionats."}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtrats.map(d => `
+    <tr class="${rowClass(d.gravedad)}">
+      <td class="td-muted">${formatData(d.fecha)}</td>
+      <td class="td-muted">${d.hora}</td>
+      <td><span class="badge ${badgeGravClass(d.gravedad)}">${badgeGravLabel(d.gravedad)}</span></td>
+      <td><span class="badge badge-cat">${d.categoria}</span></td>
+      <td class="td-muted" style="font-size:12px">${d.ubicacion}</td>
+      <td style="font-size:12px;color:#4A5568;max-width:200px">${d.resum||d.descripcion}</td>
+      <td><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="obrirDetall(${d.id})">Veure</button></td>
+    </tr>`).join("");
+}
 
-# ===== SECCIÓ 3: DECLARACIÓ =====
-story.append(seccio_titol("3. DECLARACIÓ DE L'AFECTAT"))
-story.append(Spacer(1, 6))
-for el in caixa_gran("Descripció dels fets segons l'afectat (versió pròpia del client):", altura=2.5*cm):
-    story.append(el)
-story.append(Spacer(1, 6))
-for el in caixa_gran("Mesures adoptades per seguretat:", altura=1.4*cm):
-    story.append(el)
-story.append(Spacer(1, 14))
+function actualitzarMetriques() {
+  const mes = getMesActual();
+  document.getElementById("m-total").textContent = incidencies.length;
+  document.getElementById("m-critica").textContent = incidencies.filter(d=>d.gravedad==="Crítica").length;
+  document.getElementById("m-alta").textContent = incidencies.filter(d=>d.gravedad==="Alta").length;
+  document.getElementById("m-obertes").textContent = incidencies.filter(d=>d.estat==="Obert").length;
+  document.getElementById("m-mes").textContent = incidencies.filter(d=>d.fecha.startsWith(mes)).length;
+}
 
-# ===== SECCIÓ 4: TESTIMONIS =====
-story.append(seccio_titol("4. TESTIMONIS"))
-story.append(Spacer(1, 8))
-story.append(checkbox_fila("Hi ha testimonis?", ["Sí", "No"]))
-story.append(Spacer(1, 6))
-story.append(camps_fila(("Nom complet del testimoni", 2), ("Telèfon de contacte", 1)))
-story.append(Spacer(1, 14))
+function obrirDetall(id) {
+  const d = incidencies.find(i=>i.id===id);
+  if (!d) return;
+  incidenciaDetallActual = d;
+  document.getElementById("detall-titol").textContent = `Incidència #${d.id} — ${d.categoria}`;
+  document.getElementById("btn-toggle-estat").textContent = d.estat==="Obert" ? "Marcar com a tancat" : "Reobrir incidència";
+  const af = afectats.filter(a=>a.incidenciaId===d.id);
+  document.getElementById("detall-body").innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">Dades generals</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Data i hora</div><div class="detail-value">${formatData(d.fecha)} a les ${d.hora}h</div></div>
+        <div class="detail-item"><div class="detail-label">Vigilant</div><div class="detail-value">${d.vigilant||"—"}</div></div>
+        <div class="detail-item"><div class="detail-label">Gravetat</div><div class="detail-value"><span class="badge ${badgeGravClass(d.gravedad)}">${badgeGravLabel(d.gravedad)}</span></div></div>
+        <div class="detail-item"><div class="detail-label">Categoria</div><div class="detail-value"><span class="badge badge-cat">${d.categoria}</span></div></div>
+        <div class="detail-item"><div class="detail-label">Ubicació</div><div class="detail-value">${d.ubicacion}</div></div>
+        <div class="detail-item"><div class="detail-label">Estat</div><div class="detail-value"><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></div></div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Descripció i resum</div>
+      <div class="detail-grid">
+        <div class="detail-item detail-full"><div class="detail-label">Resum</div><div class="detail-value">${d.resum||"—"}</div></div>
+        <div class="detail-item detail-full"><div class="detail-label">Descripció completa</div><div class="detail-value" style="font-size:13px;color:#4A5568">${d.descripcion}</div></div>
+        <div class="detail-item detail-full"><div class="detail-label">Mesures adoptades</div><div class="detail-value">${d.accion||"—"}</div></div>
+      </div>
+    </div>
+    ${d.imgCarpeta||d.imgRuta?`<div class="detail-section"><div class="detail-section-title">Imatges / Vídeos de seguretat</div><div class="img-ref-box"><strong>Referència d'imatges</strong>${d.imgCarpeta?`<div>📁 Carpeta: <strong>${d.imgCarpeta}</strong></div>`:""} ${d.imgRuta?`<div>📍 Ruta: <code style="font-size:11px">${d.imgRuta}</code></div>`:""} ${d.imgObs?`<div style="margin-top:4px">${d.imgObs}</div>`:""}</div></div>`:""}
+    ${d.correo?`<div class="detail-section"><div class="detail-section-title">Correu original</div><div class="correo-box">${d.correo}</div></div>`:""}
+    ${af.length?`<div class="detail-section"><div class="detail-section-title">Afectats vinculats (${af.length})</div>${af.map(a=>`<div style="font-size:13px;padding:8px 0;border-bottom:1px solid #F0F2F5">${a.nom} — ${a.tel}${a.medica==='Sí'?' · <span style="color:#922B21">Assistència mèdica</span>':""}</div>`).join("")}</div>`:""}
+  `;
+  document.getElementById("modal-detall").classList.add("open");
+}
 
-# ===== SECCIÓ 5: IMATGES / VÍDEOS =====
-story.append(seccio_titol("5. IMATGES / VÍDEOS DE SEGURETAT"))
-story.append(Spacer(1, 8))
-story.append(camps_fila(("Nom de la carpeta d'arxius", 2), ("Ruta / Ubicació", 2)))
-story.append(Spacer(1, 6))
-story.append(linia_camp("Observacions sobre les gravacions (nombre d'arxius, càmeres...)"))
-story.append(Spacer(1, 14))
+function toggleEstat() {
+  if (!incidenciaDetallActual) return;
+  const d = incidencies.find(i=>i.id===incidenciaDetallActual.id);
+  d.estat = d.estat==="Obert" ? "Tancat" : "Obert";
+  tancarModal("modal-detall");
+  actualitzarMetriques();
+  renderTabla();
+}
 
-# ===== SECCIÓ 6: CONSENTIMENT =====
-story.append(seccio_titol("6. CONSENTIMENT DE PROTECCIÓ DE DADES"))
-story.append(Spacer(1, 8))
-consent_text = (
-    "Les dades recollides en aquest document seran tractades per Barna Porters S.L. amb la finalitat de gestionar "
-    "la incidència ocorreguda al Centre Comercial Vilamarina, donar resposta a possibles reclamacions i complir "
-    "les obligacions legals derivades. Les dades no seran cedides a tercers excepte en els casos previstos per la llei. "
-    "Podeu exercir els vostres drets d'accés, rectificació, supressió i oposició dirigint-vos a l'oficina de gerència."
-)
-story.append(Paragraph(consent_text, estil('Consent', fontSize=7.5, fontName='Helvetica', textColor=colors.HexColor("#4A5568"), spaceAfter=8, leading=11)))
-story.append(Spacer(1, 6))
-story.append(checkbox_fila("L'afectat signa el consentiment?", ["Sí", "No", "Pendent"]))
-story.append(Spacer(1, 16))
+function descarregarCorreo() {
+  if (!incidenciaDetallActual?.correo) { alert("Aquesta incidència no té correu original registrat."); return; }
+  const d = incidenciaDetallActual;
+  const blob = new Blob([d.correo], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href=url; a.download=`correu_inc${d.id}_${d.fecha}.txt`; a.click();
+  URL.revokeObjectURL(url);
+}
 
-# Signatures
-sig_data = [
-    [
-        Paragraph("Signatura de l'afectat", camp_label),
-        Paragraph("Signatura del vigilant", camp_label),
-        Paragraph("Segell / Signatura oficina", camp_label),
-    ],
-    ['', '', ''],
-    [
-        Paragraph("Nom i DNI:", camp_label),
-        Paragraph("Nom i nº vigilant:", camp_label),
-        Paragraph("Data i hora:", camp_label),
-    ],
-]
-sig_table = Table(sig_data, colWidths=[w/3 - 0.2*cm]*3, rowHeights=[None, 2*cm, None])
-sig_table.setStyle(TableStyle([
-    ('BOX', (0,1), (0,1), 0.5, GRIS_LINIA),
-    ('BOX', (1,1), (1,1), 0.5, GRIS_LINIA),
-    ('BOX', (2,1), (2,1), 0.5, GRIS_LINIA),
-    ('BACKGROUND', (0,1), (-1,1), GRIS_CLAR),
-    ('TOPPADDING', (0,0), (-1,-1), 3),
-    ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-    ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ('RIGHTPADDING', (0,0), (-1,-1), 4),
-    ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
-    ('LEFTPADDING', (0,1), (-1,1), 0),
-]))
-story.append(sig_table)
-story.append(Spacer(1, 14))
+function obrirModalNova() {
+  const hoy = new Date().toISOString().slice(0,10);
+  const hora = new Date().toTimeString().slice(0,5);
+  ["n-ubicacion","n-vigilant","n-descripcion","n-resum","n-accion","n-correo","n-img-carpeta","n-img-ruta","n-img-obs"].forEach(id => document.getElementById(id).value="");
+  document.getElementById("n-fecha").value = hoy;
+  document.getElementById("n-hora").value = hora;
+  document.getElementById("n-gravedad").value = "Media";
+  document.getElementById("n-categoria").value = "Incidència Baixa";
+  document.querySelector('input[name="n-estat"][value="Obert"]').checked = true;
+  document.getElementById("modal-nova").classList.add("open");
+}
 
-# Peu
-story.append(HRFlowable(width=w, thickness=0.5, color=GRIS_LINIA))
-story.append(Spacer(1, 6))
-story.append(Paragraph(
-    "Barna Porters S.L. · Oficina de Gerència — Centre Comercial Vilamarina, Sant Joan Despí (Barcelona)  ·  Document intern d'ús exclusiu de l'equip de seguretat",
-    nota_peu
-))
+function generarResum() {
+  const desc = document.getElementById("n-descripcion").value.trim();
+  if (!desc) { alert("Escriu primer la descripció de la incidència."); return; }
+  const ubi = document.getElementById("n-ubicacion").value||"ubicació no especificada";
+  const frases = desc.split(/[.!?]/).filter(f=>f.trim().length>10);
+  const resum = frases.length>0 ? frases.slice(0,2).map(f=>f.trim()).join(". ")+"." : desc.slice(0,120)+(desc.length>120?"...":"");
+  document.getElementById("n-resum").value = `${ubi}. ${resum}`;
+}
 
-doc.build(story)
-print("PDF generat correctament")
-EOF
-python3 /home/claude/generar_pdf.py
-Salida
+function guardarIncidencia() {
+  const fecha = document.getElementById("n-fecha").value;
+  const hora = document.getElementById("n-hora").value;
+  const ubicacion = document.getElementById("n-ubicacion").value.trim();
+  const descripcion = document.getElementById("n-descripcion").value.trim();
+  if (!fecha||!hora||!ubicacion||!descripcion) { alert("Omple els camps obligatoris: data, hora, ubicació i descripció."); return; }
+  incidencies.unshift({
+    id: nextId++, fecha, hora,
+    gravedad: document.getElementById("n-gravedad").value,
+    categoria: document.getElementById("n-categoria").value,
+    ubicacion,
+    descripcion,
+    resum: document.getElementById("n-resum").value.trim()||descripcion.slice(0,100),
+    accion: document.getElementById("n-accion").value.trim(),
+    correo: document.getElementById("n-correo").value.trim(),
+    vigilant: document.getElementById("n-vigilant").value.trim(),
+    imgCarpeta: document.getElementById("n-img-carpeta").value.trim(),
+    imgRuta: document.getElementById("n-img-ruta").value.trim(),
+    imgObs: document.getElementById("n-img-obs").value.trim(),
+    estat: document.querySelector('input[name="n-estat"]:checked').value,
+  });
+  tancarModal("modal-nova");
+  actualitzarMetriques();
+  omplirFiltresMesos();
+  renderTabla();
+}
 
-PDF generat correctament
-Listo
+function exportarCSV() {
+  const filtrats = filtrar();
+  if (!filtrats.length) { alert("No hi ha incidències per exportar."); return; }
+  const cap = ["ID","Data","Hora","Gravetat","Categoria","Ubicació","Resum","Descripció","Mesures","Vigilant","Estat","Carpeta Imatges","Ruta Imatges"];
+  const files = filtrats.map(d=>[d.id,formatData(d.fecha),d.hora,d.gravedad,d.categoria,d.ubicacion,d.resum,d.descripcion,d.accion,d.vigilant,d.estat,d.imgCarpeta,d.imgRuta]);
+  const csv = [cap,...files].map(r=>r.map(c=>`"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href=url; a.download=`incidencies_vilamarina_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
 
-Se ha quedado sin mensajes gratuitos hasta las 15:40
+// AFECTATS
+function renderAfectats() {
+  const tbody = document.getElementById("tbody-afectats");
+  if (!afectats.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><div class="empty-icon">👤</div>Encara no hi ha afectats registrats.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = afectats.map(a => {
+    const inc = incidencies.find(i=>i.id===a.incidenciaId);
+    return `<tr>
+      <td>${a.nom}</td>
+      <td class="td-muted">${a.dni}</td>
+      <td class="td-muted">${a.tel}</td>
+      <td class="td-muted" style="font-size:12px">${inc?`#${inc.id} ${inc.categoria} (${formatData(inc.fecha)})`:"—"}</td>
+      <td><span class="badge ${a.medica==='Sí'?'badge-critica':'badge-baja'}">${a.medica}</span></td>
+      <td><span class="badge ${a.consentiment==='Sí'?'badge-baja':'badge-alta'}">${a.consentiment}</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="obrirDetallAfectat(${a.id})">Veure</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function obrirModalAfectat() {
+  ["a-nom","a-dni","a-tel","a-email","a-adreca","a-hospital","a-part-medic","a-declaracio","a-test-nom","a-test-tel"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  document.getElementById("a-naix").value="";
+  document.getElementById("a-medica").value="No";
+  document.getElementById("a-consentiment").value="Sí";
+  document.getElementById("a-testimonis").value="No";
+  document.getElementById("bloc-testimoni").style.display="none";
+  const sel = document.getElementById("a-incidencia");
+  sel.innerHTML = '<option value="">Sense vincular</option>'+incidencies.map(i=>`<option value="${i.id}">#${i.id} — ${i.categoria} (${formatData(i.fecha)})</option>`).join("");
+  document.getElementById("modal-afectat").classList.add("open");
+}
+
+function toggleTestimoni() {
+  document.getElementById("bloc-testimoni").style.display = document.getElementById("a-testimonis").value==="Sí"?"grid":"none";
+}
+
+function guardarAfectat() {
+  const nom = document.getElementById("a-nom").value.trim();
+  const dni = document.getElementById("a-dni").value.trim();
+  const tel = document.getElementById("a-tel").value.trim();
+  if (!nom||!dni||!tel) { alert("Omple els camps obligatoris: nom, DNI i telèfon."); return; }
+  afectats.push({
+    id: nextAfectatId++, nom, dni, tel,
+    naix: document.getElementById("a-naix").value,
+    email: document.getElementById("a-email").value.trim(),
+    adreca: document.getElementById("a-adreca").value.trim(),
+    incidenciaId: parseInt(document.getElementById("a-incidencia").value)||null,
+    medica: document.getElementById("a-medica").value,
+    hospital: document.getElementById("a-hospital").value.trim(),
+    partMedic: document.getElementById("a-part-medic").value.trim(),
+    declaracio: document.getElementById("a-declaracio").value.trim(),
+    consentiment: document.getElementById("a-consentiment").value,
+    testimonis: document.getElementById("a-testimonis").value,
+    testNom: document.getElementById("a-test-nom").value.trim(),
+    testTel: document.getElementById("a-test-tel").value.trim(),
+  });
+  tancarModal("modal-afectat");
+  renderAfectats();
+}
+
+function obrirDetallAfectat(id) {
+  const a = afectats.find(x=>x.id===id);
+  if (!a) return;
+  afectatDetallActual = a;
+  const inc = incidencies.find(i=>i.id===a.incidenciaId);
+  document.getElementById("da-titol").textContent = a.nom;
+  document.getElementById("da-body").innerHTML = `
+    <div class="detail-section"><div class="detail-section-title">Dades personals</div>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="detail-label">Nom complet</div><div class="detail-value">${a.nom}</div></div>
+      <div class="detail-item"><div class="detail-label">DNI/NIE/Passaport</div><div class="detail-value">${a.dni}</div></div>
+      <div class="detail-item"><div class="detail-label">Data de naixement</div><div class="detail-value">${formatData(a.naix)}</div></div>
+      <div class="detail-item"><div class="detail-label">Telèfon</div><div class="detail-value">${a.tel}</div></div>
+      <div class="detail-item"><div class="detail-label">Correu</div><div class="detail-value">${a.email||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Adreça</div><div class="detail-value">${a.adreca||"—"}</div></div>
+    </div></div>
+    <div class="detail-section"><div class="detail-section-title">Incidència i assistència mèdica</div>
+    <div class="detail-grid">
+      <div class="detail-item detail-full"><div class="detail-label">Incidència vinculada</div><div class="detail-value">${inc?`#${inc.id} — ${inc.categoria} (${formatData(inc.fecha)}) · ${inc.ubicacion}`:"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Assistència mèdica</div><div class="detail-value">${a.medica}</div></div>
+      <div class="detail-item"><div class="detail-label">Centre mèdic</div><div class="detail-value">${a.hospital||"—"}</div></div>
+      <div class="detail-item detail-full"><div class="detail-label">Nº part mèdic</div><div class="detail-value">${a.partMedic||"—"}</div></div>
+    </div></div>
+    <div class="detail-section"><div class="detail-section-title">Declaració i testimonis</div>
+    <div class="detail-grid">
+      <div class="detail-item detail-full"><div class="detail-label">Declaració de l'afectat</div><div class="detail-value" style="font-size:13px;color:#4A5568">${a.declaracio||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Consentiment</div><div class="detail-value"><span class="badge ${a.consentiment==='Sí'?'badge-baja':'badge-alta'}">${a.consentiment}</span></div></div>
+      <div class="detail-item"><div class="detail-label">Testimonis</div><div class="detail-value">${a.testimonis}</div></div>
+      ${a.testimonis==="Sí"?`<div class="detail-item"><div class="detail-label">Nom testimoni</div><div class="detail-value">${a.testNom||"—"}</div></div><div class="detail-item"><div class="detail-label">Tel. testimoni</div><div class="detail-value">${a.testTel||"—"}</div></div>`:""}
+    </div></div>`;
+  document.getElementById("modal-detall-afectat").classList.add("open");
+}
+
+function descarregarFitxaAfectat() {
+  if (!afectatDetallActual) return;
+  const a = afectatDetallActual;
+  const inc = incidencies.find(i=>i.id===a.incidenciaId);
+  const txt = `FITXA D'AFECTAT — VILAMARINA\nBarna Porters S.L. · Oficina de Gerència\n${"=".repeat(50)}\n\nDADES PERSONALS\nNom complet: ${a.nom}\nDNI/NIE/Passaport: ${a.dni}\nData de naixement: ${formatData(a.naix)}\nTelèfon: ${a.tel}\nCorreu: ${a.email||"—"}\nAdreça: ${a.adreca||"—"}\n\nINCIDÈNCIA VINCULADA\n${inc?`#${inc.id} — ${inc.categoria} — ${formatData(inc.fecha)} a les ${inc.hora}h\nUbicació: ${inc.ubicacion}\nDescripció: ${inc.descripcion}`:"Cap incidència vinculada"}\n\nASSISTÈNCIA MÈDICA\nAssistència requerida: ${a.medica}\nCentre mèdic: ${a.hospital||"—"}\nNº part mèdic: ${a.partMedic||"—"}\n\nDECLARACIÓ\n${a.declaracio||"—"}\n\nCONSENTIMENT I TESTIMONIS\nConsentiment dades: ${a.consentiment}\nTestimonis: ${a.testimonis}${a.testimonis==="Sí"?`\nNom: ${a.testNom||"—"}\nTel: ${a.testTel||"—"}`:""}\n\n${"=".repeat(50)}\nDocument generat: ${new Date().toLocaleString("ca-ES")}\n`;
+  const blob = new Blob([txt],{type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a2 = document.createElement("a"); a2.href=url; a2.download=`fitxa_afectat_${a.nom.replace(/ /g,"_")}.txt`; a2.click();
+  URL.revokeObjectURL(url);
+}
+
+function descarregarPlantillaPDF() {
+  alert("La plantilla PDF es descarrega des de l'arxiu 'plantilla_afectat_vilamarina.pdf' que trobaràs a la mateixa carpeta que aquest programa.");
+}
+
+// BACKUP
+function renderBackup() {
+  const mesos = [...new Set(incidencies.map(i=>i.fecha.slice(0,7)))].sort().reverse();
+  const noms = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
+  const container = document.getElementById("backup-months");
+  if (!mesos.length) { container.innerHTML='<div style="color:#7A8FA6;font-size:13px;padding:12px">Encara no hi ha incidències registrades.</div>'; return; }
+  container.innerHTML = mesos.map(m=>{
+    const [y,mo]=m.split("-");
+    const count=incidencies.filter(i=>i.fecha.startsWith(m)).length;
+    return `<div class="month-card"><div class="month-card-info"><strong>${noms[parseInt(mo)-1]} ${y}</strong><span>${count} incidència${count!==1?"es":""}</span></div><button class="btn btn-primary btn-sm" onclick="exportarBackupMes('${m}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Baixar</button></div>`;
+  }).join("");
+}
+
+function generarContingutBackup(llista) {
+  let txt = `BACKUP INCIDÈNCIES — VILAMARINA\nBarna Porters S.L. · Oficina de Gerència\nGenerat: ${new Date().toLocaleString("ca-ES")}\n${"=".repeat(60)}\n\n`;
+  llista.forEach(d=>{
+    const af=afectats.filter(a=>a.incidenciaId===d.id);
+    txt+=`INCIDÈNCIA #${d.id}\n${"-".repeat(40)}\nData: ${formatData(d.fecha)} ${d.hora}h\nGravetat: ${d.gravedad}\nCategoria: ${d.categoria}\nUbicació: ${d.ubicacion}\nEstat: ${d.estat}\nVigilant: ${d.vigilant||"—"}\n\nResum: ${d.resum||"—"}\nDescripció: ${d.descripcion}\nMesures adoptades: ${d.accion||"—"}\n`;
+    if(d.imgCarpeta||d.imgRuta) txt+=`\nIMATGES/VÍDEOS:\n  Carpeta: ${d.imgCarpeta||"—"}\n  Ruta: ${d.imgRuta||"—"}\n  Obs: ${d.imgObs||"—"}\n`;
+    if(d.correo) txt+=`\nCORREU ORIGINAL:\n${d.correo}\n`;
+    if(af.length){txt+=`\nAFECTATS (${af.length}):\n`;af.forEach(a=>{txt+=`  - ${a.nom} | DNI: ${a.dni} | Tel: ${a.tel} | Mèdica: ${a.medica} | Consentiment: ${a.consentiment}\n`;});}
+    txt+=`\n${"=".repeat(60)}\n\n`;
+  });
+  return txt;
+}
+
+function exportarBackupMes(mes) {
+  const [y,mo]=mes.split("-");
+  const noms=["gener","febrer","marc","abril","maig","juny","juliol","agost","setembre","octubre","novembre","desembre"];
+  const llista=incidencies.filter(i=>i.fecha.startsWith(mes));
+  const txt=generarContingutBackup(llista);
+  const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=`backup_${noms[parseInt(mo)-1]}_${y}_vilamarina.txt`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportarBackupComplet() {
+  if(!incidencies.length){alert("No hi ha incidències per exportar.");return;}
+  const txt=generarContingutBackup(incidencies);
+  const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=`backup_complet_vilamarina_${new Date().toISOString().slice(0,10)}.txt`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function tancarModal(id){document.getElementById(id).classList.remove("open");}
+function tancarModalFons(e,id){if(e.target===document.getElementById(id))tancarModal(id);}
+
+// INIT
+actualitzarMetriques();
+renderTabla();
+</script>
+</body>
+</html>
