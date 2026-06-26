@@ -1,96 +1,280 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PDF Pro Fix</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<style>
-body{font-family:Arial,sans-serif;background:#111;color:#fff;padding:20px}
-button{padding:10px;margin:5px}
-#log{margin-top:20px;background:#222;padding:10px;white-space:pre-wrap}
-</style>
-</head>
-<body>
-<h2>PDF Pro Fix</h2>
+cat << 'EOF' > /home/claude/generar_pdf.py
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
-<input type="file" id="pdfInput" accept=".pdf" multiple>
-<br><br>
+OUTPUT = "/mnt/user-data/outputs/plantilla_afectat_vilamarina.pdf"
 
-<button onclick="mergePDFs()">Unificar PDFs</button>
-<button onclick="compressPDF()">Comprimir PDF</button>
+doc = SimpleDocTemplate(
+    OUTPUT,
+    pagesize=A4,
+    leftMargin=2*cm,
+    rightMargin=2*cm,
+    topMargin=2*cm,
+    bottomMargin=2*cm,
+)
 
-<div id="log"></div>
+w = A4[0] - 4*cm
+BLAU = colors.HexColor("#0F1B2D")
+GROC = colors.HexColor("#F59E0B")
+GRIS_CLAR = colors.HexColor("#F4F5F7")
+GRIS_LINIA = colors.HexColor("#D1D9E0")
+BLANC = colors.white
 
-<script>
-const log = msg => document.getElementById("log").textContent += msg + "\\n";
+styles = getSampleStyleSheet()
 
-async function mergePDFs(){
-    const files = document.getElementById('pdfInput').files;
+def estil(nom, base='Normal', **kwargs):
+    return ParagraphStyle(nom, parent=styles[base], **kwargs)
 
-    if(files.length < 2){
-        alert('Selecciona al menos 2 PDFs');
-        return;
-    }
+titol_doc = estil('TitolDoc', fontSize=15, fontName='Helvetica-Bold', textColor=BLANC, spaceAfter=0)
+subtitol_doc = estil('SubtitolDoc', fontSize=9, fontName='Helvetica', textColor=colors.HexColor("#B0BEC5"), spaceAfter=0)
+seccio = estil('Seccio', fontSize=8, fontName='Helvetica-Bold', textColor=BLAU, spaceBefore=12, spaceAfter=4, textTransform='uppercase', letterSpacing=0.5)
+camp_label = estil('CampLabel', fontSize=7.5, fontName='Helvetica-Bold', textColor=colors.HexColor("#5A6B7B"))
+nota_peu = estil('NotaPeu', fontSize=7, fontName='Helvetica', textColor=colors.HexColor("#9AA5B4"), alignment=TA_CENTER)
 
-    const merged = await PDFLib.PDFDocument.create();
+story = []
 
-    for(const file of files){
-        const bytes = await file.arrayBuffer();
-        const pdf = await PDFLib.PDFDocument.load(bytes,{ignoreEncryption:true});
+# --- CAPÇALERA ---
+header_data = [[
+    Paragraph("FITXA D'AFECTAT / CLIENT", titol_doc),
+    Paragraph("Barna Porters S.L. · Centre Comercial Vilamarina", subtitol_doc),
+]]
+header_table = Table(header_data, colWidths=[w])
+header_table.setStyle(TableStyle([
+    ('BACKGROUND', (0,0), (-1,-1), BLAU),
+    ('LEFTPADDING', (0,0), (-1,-1), 16),
+    ('RIGHTPADDING', (0,0), (-1,-1), 16),
+    ('TOPPADDING', (0,0), (-1,-1), 14),
+    ('BOTTOMPADDING', (0,0), (-1,-1), 14),
+    ('ROUNDEDCORNERS', [6,6,6,6]),
+]))
+story.append(header_table)
+story.append(Spacer(1, 10))
 
-        const pages = await merged.copyPages(pdf,pdf.getPageIndices());
-        pages.forEach(p=>merged.addPage(p));
-    }
+# Franja groga d'avís
+avis_data = [[ Paragraph("Document per emplenar manualment per l'equip de seguretat · Retornar a l'oficina de gerència", estil('Avis', fontSize=7.5, fontName='Helvetica-Bold', textColor=BLAU, alignment=TA_CENTER)) ]]
+avis_table = Table(avis_data, colWidths=[w])
+avis_table.setStyle(TableStyle([
+    ('BACKGROUND', (0,0), (-1,-1), GROC),
+    ('TOPPADDING', (0,0), (-1,-1), 6),
+    ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+    ('ROUNDEDCORNERS', [4,4,4,4]),
+]))
+story.append(avis_table)
+story.append(Spacer(1, 14))
 
-    const out = await merged.save();
-    download(out,'unificado.pdf');
+def linia_camp(label, amplada=None):
+    amplada = amplada or w - 0.4*cm
+    data = [
+        [Paragraph(label, camp_label), ''],
+    ]
+    t = Table(data, colWidths=[amplada * 0.30, amplada * 0.70])
+    t.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
+        ('LINEBELOW', (1,0), (1,0), 0.5, GRIS_LINIA),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    return t
 
-    log('PDFs unificados correctamente');
-}
+def camps_fila(*parells):
+    # parells = [(label, proporcio), ...]
+    total = sum(p[1] for p in parells)
+    cols_data = []
+    col_widths = []
+    espai = 0.3*cm
+    n = len(parells)
+    espai_total = espai * (n-1)
+    ample_util = w - 0.4*cm - espai_total
+    for label, prop in parells:
+        ample = ample_util * (prop / total)
+        col_widths.append(ample * 0.35)
+        col_widths.append(ample * 0.65)
+        cols_data.extend([Paragraph(label, camp_label), ''])
+    # afegir espais entre parells
+    finals_data = []
+    finals_widths = []
+    for i, (label, prop) in enumerate(parells):
+        finals_data.extend([Paragraph(label, camp_label), ''])
+        finals_widths.extend([col_widths[i*2], col_widths[i*2+1]])
+        if i < n-1:
+            finals_data.extend([''])
+            finals_widths.append(espai)
+    t = Table([finals_data], colWidths=finals_widths)
+    lines = []
+    col = 0
+    for i, (label, prop) in enumerate(parells):
+        label_col = col
+        value_col = col + 1
+        lines.append(('LINEBELOW', (value_col,0), (value_col,0), 0.5, GRIS_LINIA))
+        col += 2
+        if i < n-1:
+            col += 1  # espai
+    t.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ] + lines))
+    return t
 
-async function compressPDF(){
+def seccio_titol(text):
+    data = [[Paragraph(text, estil('SecT', fontSize=8, fontName='Helvetica-Bold', textColor=BLANC, spaceBefore=0, spaceAfter=0))]]
+    t = Table(data, colWidths=[w])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), BLAU),
+        ('LEFTPADDING', (0,0), (-1,-1), 10),
+        ('TOPPADDING', (0,0), (-1,-1), 5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+    ]))
+    return t
 
-    const file = document.getElementById('pdfInput').files[0];
+def caixa_gran(label, altura=1.8*cm):
+    data_label = [[Paragraph(label, camp_label)]]
+    t_label = Table(data_label, colWidths=[w])
+    t_label.setStyle(TableStyle([
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+    ]))
+    data_box = [['']]
+    t_box = Table(data_box, colWidths=[w - 0.2*cm], rowHeights=[altura])
+    t_box.setStyle(TableStyle([
+        ('BOX', (0,0), (-1,-1), 0.5, GRIS_LINIA),
+        ('BACKGROUND', (0,0), (-1,-1), GRIS_CLAR),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+    ]))
+    return [t_label, t_box, Spacer(1, 4)]
 
-    if(!file){
-        alert('Selecciona un PDF');
-        return;
-    }
+def checkbox_fila(label, opcions):
+    items = "    ".join(f"☐  {o}" for o in opcions)
+    data = [[Paragraph(f"<b>{label}</b>", camp_label), Paragraph(items, estil('chk', fontSize=9, fontName='Helvetica', textColor=BLAU))]]
+    t = Table(data, colWidths=[w*0.30, w*0.70])
+    t.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    return t
 
-    const bytes = await file.arrayBuffer();
+# ===== SECCIÓ 1: DADES PERSONALS =====
+story.append(seccio_titol("1. DADES PERSONALS DE L'AFECTAT"))
+story.append(Spacer(1, 8))
+story.append(linia_camp("Nom complet"))
+story.append(Spacer(1, 6))
+story.append(camps_fila(("DNI / NIE / Passaport", 1), ("Data de naixement", 1), ("Telèfon", 1)))
+story.append(Spacer(1, 6))
+story.append(linia_camp("Correu electrònic"))
+story.append(Spacer(1, 6))
+story.append(linia_camp("Adreça completa (carrer, núm., CP, població)"))
+story.append(Spacer(1, 14))
 
-    const pdf = await PDFLib.PDFDocument.load(bytes,{ignoreEncryption:true});
+# ===== SECCIÓ 2: DADES DE LA INCIDÈNCIA =====
+story.append(seccio_titol("2. DADES DE LA INCIDÈNCIA"))
+story.append(Spacer(1, 8))
+story.append(camps_fila(("Data de la incidència", 1), ("Hora", 1), ("Ubicació al CC", 2)))
+story.append(Spacer(1, 6))
+story.append(checkbox_fila("Va requerir assistència mèdica?", ["Sí", "No"]))
+story.append(Spacer(1, 6))
+story.append(camps_fila(("Centre mèdic / Hospital", 2), ("Nº part mèdic", 1)))
+story.append(Spacer(1, 6))
+story.append(camps_fila(("Vigilant responsable", 1), ("Nº incident intern", 1)))
+story.append(Spacer(1, 14))
 
-    const out = await pdf.save({
-        useObjectStreams:true,
-        addDefaultPage:false
-    });
+# ===== SECCIÓ 3: DECLARACIÓ =====
+story.append(seccio_titol("3. DECLARACIÓ DE L'AFECTAT"))
+story.append(Spacer(1, 6))
+for el in caixa_gran("Descripció dels fets segons l'afectat (versió pròpia del client):", altura=2.5*cm):
+    story.append(el)
+story.append(Spacer(1, 6))
+for el in caixa_gran("Mesures adoptades per seguretat:", altura=1.4*cm):
+    story.append(el)
+story.append(Spacer(1, 14))
 
-    download(out,'comprimido.pdf');
+# ===== SECCIÓ 4: TESTIMONIS =====
+story.append(seccio_titol("4. TESTIMONIS"))
+story.append(Spacer(1, 8))
+story.append(checkbox_fila("Hi ha testimonis?", ["Sí", "No"]))
+story.append(Spacer(1, 6))
+story.append(camps_fila(("Nom complet del testimoni", 2), ("Telèfon de contacte", 1)))
+story.append(Spacer(1, 14))
 
-    log('Compresión básica completada');
-}
+# ===== SECCIÓ 5: IMATGES / VÍDEOS =====
+story.append(seccio_titol("5. IMATGES / VÍDEOS DE SEGURETAT"))
+story.append(Spacer(1, 8))
+story.append(camps_fila(("Nom de la carpeta d'arxius", 2), ("Ruta / Ubicació", 2)))
+story.append(Spacer(1, 6))
+story.append(linia_camp("Observacions sobre les gravacions (nombre d'arxius, càmeres...)"))
+story.append(Spacer(1, 14))
 
-function download(bytes,name){
-    const blob = new Blob([bytes],{type:'application/pdf'});
-    const url = URL.createObjectURL(blob);
+# ===== SECCIÓ 6: CONSENTIMENT =====
+story.append(seccio_titol("6. CONSENTIMENT DE PROTECCIÓ DE DADES"))
+story.append(Spacer(1, 8))
+consent_text = (
+    "Les dades recollides en aquest document seran tractades per Barna Porters S.L. amb la finalitat de gestionar "
+    "la incidència ocorreguda al Centre Comercial Vilamarina, donar resposta a possibles reclamacions i complir "
+    "les obligacions legals derivades. Les dades no seran cedides a tercers excepte en els casos previstos per la llei. "
+    "Podeu exercir els vostres drets d'accés, rectificació, supressió i oposició dirigint-vos a l'oficina de gerència."
+)
+story.append(Paragraph(consent_text, estil('Consent', fontSize=7.5, fontName='Helvetica', textColor=colors.HexColor("#4A5568"), spaceAfter=8, leading=11)))
+story.append(Spacer(1, 6))
+story.append(checkbox_fila("L'afectat signa el consentiment?", ["Sí", "No", "Pendent"]))
+story.append(Spacer(1, 16))
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.click();
+# Signatures
+sig_data = [
+    [
+        Paragraph("Signatura de l'afectat", camp_label),
+        Paragraph("Signatura del vigilant", camp_label),
+        Paragraph("Segell / Signatura oficina", camp_label),
+    ],
+    ['', '', ''],
+    [
+        Paragraph("Nom i DNI:", camp_label),
+        Paragraph("Nom i nº vigilant:", camp_label),
+        Paragraph("Data i hora:", camp_label),
+    ],
+]
+sig_table = Table(sig_data, colWidths=[w/3 - 0.2*cm]*3, rowHeights=[None, 2*cm, None])
+sig_table.setStyle(TableStyle([
+    ('BOX', (0,1), (0,1), 0.5, GRIS_LINIA),
+    ('BOX', (1,1), (1,1), 0.5, GRIS_LINIA),
+    ('BOX', (2,1), (2,1), 0.5, GRIS_LINIA),
+    ('BACKGROUND', (0,1), (-1,1), GRIS_CLAR),
+    ('TOPPADDING', (0,0), (-1,-1), 3),
+    ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+    ('LEFTPADDING', (0,0), (-1,-1), 4),
+    ('RIGHTPADDING', (0,0), (-1,-1), 4),
+    ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
+    ('LEFTPADDING', (0,1), (-1,1), 0),
+]))
+story.append(sig_table)
+story.append(Spacer(1, 14))
 
-    setTimeout(()=>URL.revokeObjectURL(url),3000);
-}
+# Peu
+story.append(HRFlowable(width=w, thickness=0.5, color=GRIS_LINIA))
+story.append(Spacer(1, 6))
+story.append(Paragraph(
+    "Barna Porters S.L. · Oficina de Gerència — Centre Comercial Vilamarina, Sant Joan Despí (Barcelona)  ·  Document intern d'ús exclusiu de l'equip de seguretat",
+    nota_peu
+))
 
-window.onload = ()=>{
-    if(typeof PDFLib === 'undefined'){
-        log('ERROR: PDFLib no cargó. Comprueba Internet o CDN.');
-    }else{
-        log('PDFLib cargado correctamente.');
-    }
-}
-</script>
-</body>
-</html>
+doc.build(story)
+print("PDF generat correctament")
+EOF
+python3 /home/claude/generar_pdf.py
+Salida
+
+PDF generat correctament
+Listo
+
+Se ha quedado sin mensajes gratuitos hasta las 15:40
