@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html lang="ca">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Incidencias de Seguridad — Vilamarina</title>
+
+<link href="css/style.css" rel="stylesheet"/></head>
+<body>
+<div class="topbar">
+<div class="topbar-left">
+<div class="topbar-logo">
+<svg viewbox="0 0 24 24"><path d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5"></path></svg>
+</div>
+<div>
+<div class="topbar-title">Vilamarina — Gestión de Incidencias</div>
+<div class="topbar-sub">Oficina de Gerencia</div>
+</div>
+</div>
+<div class="topbar-nav">
+<button class="nav-btn active" onclick="canviarVista('incidencies', this)">Incidencias</button>
+<button class="nav-btn" onclick="canviarVista('afectats', this)">Afectados</button>
+<button class="nav-btn" onclick="canviarVista('backup', this)">Copias de seguridad</button>
+</div>
+</div>
+<div class="main">
+<!-- INCIDÈNCIES -->
+<div class="view active" id="view-incidencies">
+<div class="page-header">
+<div>
+<h1>Registro de Incidencias de Seguridad</h1>
+<p>Clasificación por gravedad y categoría · Todas las incidencias quedan registradas con fecha, hora y medidas adoptadas</p>
+</div>
+<div class="header-actions">
+<button class="btn btn-accent" onclick="obrirModalNova()">
+<svg viewbox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"></line><line x1="5" x2="19" y1="12" y2="12"></line></svg>
+          Nueva incidencia
+        </button>
+<button class="btn btn-primary" onclick="exportarCSV()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+          Exportar Excel
+        </button>
+</div>
+</div>
+<div class="metrics">
+<div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="m-total">0</div></div>
+<div class="metric"><div class="metric-label">Críticas</div><div class="metric-value red" id="m-critica">0</div></div>
+<div class="metric"><div class="metric-label">Altes</div><div class="metric-value amber" id="m-alta">0</div></div>
+<div class="metric"><div class="metric-label">Abiertas</div><div class="metric-value blue" id="m-obertes">0</div></div>
+<div class="metric"><div class="metric-label">Este mes</div><div class="metric-value green" id="m-mes">0</div></div>
+</div>
+<div class="panel">
+<div class="panel-header">
+<div class="filters">
+<input id="f-buscar" oninput="renderTabla()" placeholder="Buscar..." type="text"/>
+<select id="f-gravedad" onchange="renderTabla()">
+<option value="">Todas las gravedades</option>
+<option value="Crítica">Crítica</option>
+<option value="Alta">Alta</option>
+<option value="Media">Media</option>
+<option value="Baja">Baja</option>
+</select>
+<select id="f-categoria" onchange="renderTabla()">
+<option value="">Todas las categorías</option>
+<option value="Robatori">Robo</option>
+<option value="Danys">Daños</option>
+<option value="Accident Parking">Accident Parking</option>
+<option value="Accident CC">Accident CC</option>
+<option value="Incidència Baixa">Incidencia leve</option>
+</select>
+<select id="f-estat" onchange="renderTabla()">
+<option value="">Todos los estados</option>
+<option value="Obert">Abierto</option>
+<option value="Tancat">Cerrado</option>
+</select>
+<select id="f-mes" onchange="renderTabla()">
+<option value="">Todos los meses</option>
+</select>
+</div>
+</div>
+<div style="overflow-x:auto">
+<table>
+<thead>
+<tr>
+<th style="width:85px">Fecha</th>
+<th style="width:60px">Hora</th>
+<th style="width:90px">Gravedad</th>
+<th style="width:130px">Categoría</th>
+<th style="width:130px">Ubicación</th>
+<th>Resumen</th>
+<th style="width:80px">Estado</th>
+<th style="width:80px">Acciones</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- AFECTATS -->
+<div class="view" id="view-afectats">
+<div class="page-header">
+<div>
+<h1>Afectados / Clientes</h1>
+<p>Fichas de datos para apertura de partes de seguro</p>
+</div>
+<div class="header-actions">
+<button class="btn btn-outline" onclick="descarregarPlantillaPDF()">
+<svg viewbox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" x2="8" y1="13" y2="13"></line><line x1="16" x2="8" y1="17" y2="17"></line></svg>
+          Descargar plantilla PDF
+        </button>
+<button class="btn btn-accent" onclick="obrirModalAfectat()">
+<svg viewbox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"></line><line x1="5" x2="19" y1="12" y2="12"></line></svg>
+          Nuevo afectado
+        </button>
+</div>
+</div>
+<div class="pdf-banner">
+<div class="pdf-banner-text">
+<strong>Plantilla imprimible para seguridad</strong>
+<span>Descarga el PDF, imprímelo y entrégalo al vigilante para que lo rellene manualmente con los datos del cliente afectado.</span>
+</div>
+<button class="btn btn-accent" onclick="descarregarPlantillaPDF()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+        Descargar PDF
+      </button>
+</div>
+<div class="panel">
+<div style="overflow-x:auto">
+<table>
+<thead>
+<tr>
+<th>Nombre completo</th>
+<th>DNI/NIE</th>
+<th>Teléfono</th>
+<th>Incidencia vinculada</th>
+<th>Asist. médica</th>
+<th>Consentimiento</th>
+<th style="width:80px">Acciones</th>
+</tr>
+</thead>
+<tbody id="tbody-afectats"></tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- BACKUP -->
+<div class="view" id="view-backup">
+<div class="page-header">
+<div>
+<h1>Copias de seguridad</h1>
+<p>Genera y descarga el registro completo de cada mes</p>
+</div>
+</div>
+<div class="backup-panel">
+<h3>Backup mensual</h3>
+<p>Cada archivo incluye todas las incidencias del mes, los resúmenes, los correos originales y los datos de los afectados vinculados.</p>
+<div class="backup-months" id="backup-months">
+<div style="color:#7A8FA6;font-size:13px;padding:12px">Aún no hay incidencias registradas.</div>
+</div>
+</div>
+<div class="backup-panel">
+<h3>Backup completo</h3>
+<p>Descarga todas las incidencias de todos los meses en un solo archivo.</p>
+<button class="btn btn-primary" onclick="exportarBackupComplet()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+        Descargar backup completo
+      </button>
+</div>
+</div>
+</div>
+<!-- MODAL NOVA INCIDÈNCIA -->
+<div class="modal-overlay" id="modal-nova" onclick="tancarModalFons(event,'modal-nova')">
+<div class="modal">
+<div class="modal-header">
+<h2>Nueva incidencia</h2>
+<button class="modal-close" onclick="tancarModal('modal-nova')">✕</button>
+</div>
+<div class="modal-body">
+<div class="form-section">
+<div class="form-section-title">Datos generales</div>
+<div class="form-row cols-3">
+<div class="form-group"><label>Fecha *</label><input id="n-fecha" type="date"/></div>
+<div class="form-group"><label>Hora *</label><input id="n-hora" type="time"/></div>
+<div class="form-group"><label>Vigilante responsable</label><input id="n-vigilant" placeholder="Nombre del vigilante" type="text"/></div>
+</div>
+<div class="form-row cols-2">
+<div class="form-group">
+<label>Gravedad *</label>
+<select id="n-gravedad">
+<option value="Crítica">Crítica</option>
+<option value="Alta">Alta</option>
+<option selected="" value="Media">Media</option>
+<option value="Baja">Baja</option>
+</select>
+</div>
+<div class="form-group">
+<label>Categoría *</label>
+<select id="n-categoria">
+<option value="Robatori">Robo</option>
+<option value="Danys">Daños</option>
+<option value="Accident Parking">Accident Parking</option>
+<option value="Accident CC">Accident CC</option>
+<option value="Incidència Baixa">Incidencia leve</option>
+</select>
+</div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>Ubicación *</label><input id="n-ubicacion" placeholder="Zona, planta, tienda..." type="text"/></div>
+</div>
+</div>
+<div class="form-section">
+<div class="form-section-title">Descripción y medidas</div>
+<div class="form-row">
+<div class="form-group"><label>Descripción de la incidencia *</label><textarea id="n-descripcion" placeholder="Describe los hechos de manera clara y objetiva..."></textarea></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>Resumen (editable)</label><textarea id="n-resum" placeholder="Resumen breve de la incidencia para la tabla principal..."></textarea></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>Medidas adoptadas</label><textarea id="n-accion" placeholder="Actuación del vigilante, aviso a emergencias, policía..." style="min-height:56px"></textarea></div>
+</div>
+</div>
+<div class="form-section">
+<div class="form-section-title">Correo original</div>
+<div class="form-row">
+<div class="form-group"><label>Pega aquí el texto del correo recibido</label><textarea id="n-correo" placeholder="Copia y pega el contenido del correo de seguridad..." style="min-height:90px;font-family:monospace;font-size:12px"></textarea></div>
+</div>
+</div>
+<div class="form-section">
+<div class="form-section-title">Imágenes / Vídeos de seguridad</div>
+<div class="form-row cols-2">
+<div class="form-group"><label>Nombre de la carpeta</label><input id="n-img-carpeta" placeholder="Ex: INC_20250620_001" type="text"/></div>
+<div class="form-group"><label>Ubicación / Ruta</label><input id="n-img-ruta" placeholder="Ex: \\servidor\seguretat\2025\juny\" type="text"/></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>Observaciones sobre las imágenes</label><input id="n-img-obs" placeholder="Ex: 3 arxius MP4, càmera entrada principal" type="text"/></div>
+</div>
+</div>
+<div class="form-section">
+<div class="form-section-title">Estado</div>
+<div class="radio-group">
+<label><input checked="" name="n-estat" type="radio" value="Obert"/> Obert</label>
+<label><input name="n-estat" type="radio" value="Tancat"/> Tancat</label>
+</div>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline" onclick="generarResum()">✦ Generar resumen</button>
+<button class="btn btn-outline" onclick="tancarModal('modal-nova')">Cancelar</button>
+<button class="btn btn-accent" onclick="guardarIncidencia()">Guardar incidencia</button>
+</div>
+</div>
+</div>
+<!-- MODAL DETALL INCIDÈNCIA -->
+<div class="modal-overlay" id="modal-detall" onclick="tancarModalFons(event,'modal-detall')">
+<div class="modal">
+<div class="modal-header">
+<h2 id="detall-titol">Detalle</h2>
+<button class="modal-close" onclick="tancarModal('modal-detall')">✕</button>
+</div>
+<div class="modal-body" id="detall-body"></div>
+<div class="modal-footer">
+<button class="btn btn-outline" onclick="descarregarCorreo()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+        Descargar correo
+      </button>
+<button class="btn btn-outline" onclick="tancarModal('modal-detall')">Cerrar</button>
+<button class="btn btn-accent" id="btn-toggle-estat" onclick="toggleEstat()">Marcar como cerrado</button>
+</div>
+</div>
+</div>
+<!-- MODAL NOU AFECTAT -->
+<div class="modal-overlay" id="modal-afectat" onclick="tancarModalFons(event,'modal-afectat')">
+<div class="modal">
+<div class="modal-header">
+<h2>Ficha de afectado / cliente</h2>
+<button class="modal-close" onclick="tancarModal('modal-afectat')">✕</button>
+</div>
+<div class="modal-body">
+<div class="form-section">
+<div class="form-section-title">Datos personales</div>
+<div class="form-row cols-2">
+<div class="form-group"><label>Nombre completo *</label><input id="a-nom" placeholder="Nom i cognoms" type="text"/></div>
+<div class="form-group"><label>DNI / NIE / Pasaporte *</label><input id="a-dni" placeholder="00000000A" type="text"/></div>
+</div>
+<div class="form-row cols-2">
+<div class="form-group"><label>Fecha de nacimiento</label><input id="a-naix" type="date"/></div>
+<div class="form-group"><label>Teléfono *</label><input id="a-tel" placeholder="6XX XXX XXX" type="tel"/></div>
+</div>
+<div class="form-row cols-2">
+<div class="form-group"><label>Correo electrónico</label><input id="a-email" placeholder="exemple@correu.com" type="email"/></div>
+<div class="form-group"><label>Dirección completa</label><input id="a-adreca" placeholder="Carrer, número, CP, població" type="text"/></div>
+</div>
+</div>
+<div class="form-section">
+<div class="form-section-title">Datos de la incidencia</div>
+<div class="form-row cols-2">
+<div class="form-group"><label>Incidencia vinculada</label><select id="a-incidencia"></select></div>
+<div class="form-group"><label>¿Requirió asistencia médica?</label><select id="a-medica"><option value="No">No</option><option value="Sí">Sí</option></select></div>
+</div>
+<div class="form-row cols-2">
+<div class="form-group"><label>Centro médico / Hospital</label><input id="a-hospital" placeholder="On va ser atès" type="text"/></div>
+<div class="form-group"><label>Nº de parte médico</label><input id="a-part-medic" placeholder="Referència del part" type="text"/></div>
+</div>
+</div>
+<div class="form-section">
+<div class="form-section-title">Declaración del afectado</div>
+<div class="form-row">
+<div class="form-group"><label>Descripción de los hechos (versión del afectado)</label><textarea id="a-declaracio" placeholder="El que declara el propi client sobre el que va ocórrer..."></textarea></div>
+</div>
+<div class="form-row cols-2">
+<div class="form-group"><label>¿Firma consentimiento de datos?</label><select id="a-consentiment"><option value="Sí">Sí</option><option value="No">No</option><option value="Pendent">Pendiente</option></select></div>
+<div class="form-group"><label>¿Hay testigos?</label><select id="a-testimonis" onchange="toggleTestimoni()"><option value="No">No</option><option value="Sí">Sí</option></select></div>
+</div>
+<div class="form-row cols-2" id="bloc-testimoni" style="display:none">
+<div class="form-group"><label>Nombre del testigo</label><input id="a-test-nom" placeholder="Nom complet" type="text"/></div>
+<div class="form-group"><label>Teléfono del testigo</label><input id="a-test-tel" placeholder="6XX XXX XXX" type="tel"/></div>
+</div>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline" onclick="tancarModal('modal-afectat')">Cancelar</button>
+<button class="btn btn-accent" onclick="guardarAfectat()">Guardar ficha</button>
+</div>
+</div>
+</div>
+<!-- MODAL DETALL AFECTAT -->
+<div class="modal-overlay" id="modal-detall-afectat" onclick="tancarModalFons(event,'modal-detall-afectat')">
+<div class="modal">
+<div class="modal-header">
+<h2 id="da-titol">Ficha de afectado</h2>
+<button class="modal-close" onclick="tancarModal('modal-detall-afectat')">✕</button>
+</div>
+<div class="modal-body" id="da-body"></div>
+<div class="modal-footer">
+<button class="btn btn-outline" onclick="descarregarFitxaAfectat()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+        Descargar ficha
+      </button>
+<button class="btn btn-outline" onclick="tancarModal('modal-detall-afectat')">Cerrar</button>
+</div>
+</div>
+</div>
+
+<script src="js/app.js"></script></body>
+</html>
