@@ -33,18 +33,19 @@ function omplirFiltresMesos() {
 }
 
 function filtrar() {
-  const buscar = document.getElementById("f-buscar").value.toLowerCase();
-  const grav = document.getElementById("f-gravedad").value;
-  const cat = document.getElementById("f-categoria").value;
-  const estat = document.getElementById("f-estat").value;
-  const mes = document.getElementById("f-mes").value;
-  return incidencies.filter(d =>
-    (!buscar || d.descripcion.toLowerCase().includes(buscar) || d.ubicacion.toLowerCase().includes(buscar) || (d.resum||"").toLowerCase().includes(buscar))
-    && (!grav || d.gravedad === grav)
-    && (!cat || d.categoria === cat)
-    && (!estat || d.estat === estat)
-    && (!mes || d.fecha.startsWith(mes))
-  );
+  var el = function(id){ var e=document.getElementById(id); return e?e.value:""; };
+  var buscar = (el("f-buscar")||"").toLowerCase();
+  var grav = el("f-gravedad")||""; var cat = el("f-categoria")||"";
+  var est = el("f-estat")||""; var mes = el("f-mes")||"";
+  var res = incidencies.filter(function(d){
+    if (grav && d.gravedad !== grav) return false;
+    if (cat && d.categoria !== cat) return false;
+    if (est && d.estat !== est) return false;
+    if (mes && !((d.fecha||"").startsWith(mes) || (d.fecha||"").split("/").reverse().join("-").startsWith(mes))) return false;
+    if (buscar){ var hay=((d.resum||"")+" "+(d.descripcion||"")+" "+(d.ubicacion||"")+" "+(d.categoria||"")).toLowerCase(); if(hay.indexOf(buscar)===-1) return false; }
+    return true;
+  });
+  return res;
 }
 
 function renderTabla() {
@@ -407,26 +408,31 @@ function mapearFilaSheet(f, i) {
 }
 
 async function cargarDesdeSheets() {
-  try {
-    const resp = await fetch(VILAMARINA_WEBAPP_URL, { method: "GET" });
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const filas = await resp.json();
-    if (!Array.isArray(filas)) return;
-
-    // Elimina las que ya venían de Sheets para no duplicar en recargas
-    incidencies = incidencies.filter(function (x) { return x.origen !== "sheets"; });
-
-    const nuevas = filas.map(mapearFilaSheet);
-    // Las más recientes primero
-    incidencies = nuevas.concat(incidencies);
-
-    if (typeof filtrar === "function") filtrar();
-    else if (typeof renderTabla === "function") renderTabla();
-    if (typeof actualitzarMetriques === "function") actualitzarMetriques();
-    console.log("[Vilamarina] Cargadas " + nuevas.length + " incidencias desde Google Sheets.");
-  } catch (e) {
-    console.warn("[Vilamarina] No se pudo cargar desde Google Sheets:", e.message);
-  }
+  return new Promise(function (resolve) {
+    var cbName = "__vilaCb" + Date.now();
+    var s = document.createElement("script");
+    var terminado = false;
+    window[cbName] = function (filas) {
+      terminado = true;
+      try {
+        if (Array.isArray(filas)) {
+          incidencies = incidencies.filter(function (x) { return x.origen !== "sheets"; });
+          var nuevas = filas.map(mapearFilaSheet);
+          incidencies = nuevas.concat(incidencies);
+          if (typeof renderTabla === "function") renderTabla();
+          if (typeof actualitzarMetriques === "function") actualitzarMetriques();
+          console.log("[Vilamarina] Cargadas " + nuevas.length + " incidencias desde Google Sheets.");
+        }
+      } catch (e) { console.warn("[Vilamarina] Error procesando datos:", e.message); }
+      delete window[cbName];
+      if (s.parentNode) s.parentNode.removeChild(s);
+      resolve();
+    };
+    s.src = VILAMARINA_WEBAPP_URL + "?callback=" + cbName + "&t=" + Date.now();
+    s.onerror = function () { if (!terminado) { console.warn("[Vilamarina] No se pudo cargar."); resolve(); } };
+    document.body.appendChild(s);
+    setTimeout(function () { if (!terminado) resolve(); }, 10000);
+  });
 }
 
 // Carga al abrir la página
