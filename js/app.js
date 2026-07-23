@@ -25,7 +25,7 @@ function omplirFiltresMesos() {
   const mesos = [...new Set(incidencies.map(i => i.fecha.slice(0,7)))].sort().reverse();
   const sel = document.getElementById("f-mes");
   sel.innerHTML = '<option value="">Tots els mesos</option>';
-  const noms = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
+  const noms = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   mesos.forEach(m => {
     const [y, mo] = m.split("-");
     sel.innerHTML += `<option value="${m}">${noms[parseInt(mo)-1]} ${y}</option>`;
@@ -81,7 +81,7 @@ function obrirDetall(id) {
   if (!d) return;
   incidenciaDetallActual = d;
   document.getElementById("detall-titol").textContent = `Incidència #${d.id} — ${d.categoria}`;
-  document.getElementById("btn-toggle-estat").textContent = d.estat==="Obert" ? "Marcar com a tancat" : "Reobrir incidència";
+  document.getElementById("btn-toggle-estat").textContent = d.estat==="Obert" ? "Marcar com a tancat" : "Reabrir incidencia";
   const af = afectats.filter(a=>a.incidenciaId===d.id);
   document.getElementById("detall-body").innerHTML = `
     <div class="detail-section">
@@ -105,7 +105,7 @@ function obrirDetall(id) {
     </div>
     ${d.imgCarpeta||d.imgRuta?`<div class="detail-section"><div class="detail-section-title">Imatges / Vídeos de seguretat</div><div class="img-ref-box"><strong>Referència d'imatges</strong>${d.imgCarpeta?`<div>📁 Carpeta: <strong>${d.imgCarpeta}</strong></div>`:""} ${d.imgRuta?`<div>📍 Ruta: <code style="font-size:11px">${d.imgRuta}</code></div>`:""} ${d.imgObs?`<div style="margin-top:4px">${d.imgObs}</div>`:""}</div></div>`:""}
     ${d.correo?`<div class="detail-section"><div class="detail-section-title">Correu original</div><div class="correo-box">${d.correo}</div></div>`:""}
-    ${af.length?`<div class="detail-section"><div class="detail-section-title">Afectats vinculats (${af.length})</div>${af.map(a=>`<div style="font-size:13px;padding:8px 0;border-bottom:1px solid #F0F2F5">${a.nom} — ${a.tel}${a.medica==='Sí'?' · <span style="color:#922B21">Assistència mèdica</span>':""}</div>`).join("")}</div>`:""}
+    ${af.length?`<div class="detail-section"><div class="detail-section-title">Afectats vinculats (${af.length})</div>${af.map(a=>`<div style="font-size:13px;padding:8px 0;border-bottom:1px solid #F0F2F5">${a.nom} — ${a.tel}${a.medica==='Sí'?' · <span style="color:#922B21">Asistencia médica</span>':""}</div>`).join("")}</div>`:""}
   `;
   document.getElementById("modal-detall").classList.add("open");
 }
@@ -120,7 +120,7 @@ function toggleEstat() {
 }
 
 function descarregarCorreo() {
-  if (!incidenciaDetallActual?.correo) { alert("Aquesta incidència no té correu original registrat."); return; }
+  if (!incidenciaDetallActual?.correo) { alert("Esta incidencia no tiene correo original registrado."); return; }
   const d = incidenciaDetallActual;
   const blob = new Blob([d.correo], {type:"text/plain;charset=utf-8"});
   const url = URL.createObjectURL(blob);
@@ -142,8 +142,8 @@ function obrirModalNova() {
 
 function generarResum() {
   const desc = document.getElementById("n-descripcion").value.trim();
-  if (!desc) { alert("Escriu primer la descripció de la incidència."); return; }
-  const ubi = document.getElementById("n-ubicacion").value||"ubicació no especificada";
+  if (!desc) { alert("Escribe primero la descripción de la incidencia."); return; }
+  const ubi = document.getElementById("n-ubicacion").value||"ubicación no especificada";
   const frases = desc.split(/[.!?]/).filter(f=>f.trim().length>10);
   const resum = frases.length>0 ? frases.slice(0,2).map(f=>f.trim()).join(". ")+"." : desc.slice(0,120)+(desc.length>120?"...":"");
   document.getElementById("n-resum").value = `${ubi}. ${resum}`;
@@ -154,7 +154,7 @@ function guardarIncidencia() {
   const hora = document.getElementById("n-hora").value;
   const ubicacion = document.getElementById("n-ubicacion").value.trim();
   const descripcion = document.getElementById("n-descripcion").value.trim();
-  if (!fecha||!hora||!ubicacion||!descripcion) { alert("Omple els camps obligatoris: data, hora, ubicació i descripció."); return; }
+  if (!fecha||!hora||!ubicacion||!descripcion) { alert("Rellena los campos obligatorios: fecha, hora, ubicación y descripción."); return; }
   incidencies.unshift({
     id: nextId++, fecha, hora,
     gravedad: document.getElementById("n-gravedad").value,
@@ -178,7 +178,7 @@ function guardarIncidencia() {
 
 function exportarCSV() {
   const filtrats = filtrar();
-  if (!filtrats.length) { alert("No hi ha incidències per exportar."); return; }
+  if (!filtrats.length) { alert("No hay incidencias para exportar."); return; }
   const cap = ["ID","Data","Hora","Gravetat","Categoria","Ubicació","Resum","Descripció","Mesures","Vigilant","Estat","Carpeta Imatges","Ruta Imatges"];
   const files = filtrats.map(d=>[d.id,formatData(d.fecha),d.hora,d.gravedad,d.categoria,d.ubicacion,d.resum,d.descripcion,d.accion,d.vigilant,d.estat,d.imgCarpeta,d.imgRuta]);
   const csv = [cap,...files].map(r=>r.map(c=>`"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
@@ -229,7 +229,7 @@ function guardarAfectat() {
   const nom = document.getElementById("a-nom").value.trim();
   const dni = document.getElementById("a-dni").value.trim();
   const tel = document.getElementById("a-tel").value.trim();
-  if (!nom||!dni||!tel) { alert("Omple els camps obligatoris: nom, DNI i telèfon."); return; }
+  if (!nom||!dni||!tel) { alert("Rellena los campos obligatorios: nombre, DNI y teléfono."); return; }
   afectats.push({
     id: nextAfectatId++, nom, dni, tel,
     naix: document.getElementById("a-naix").value,
@@ -268,7 +268,7 @@ function obrirDetallAfectat(id) {
     <div class="detail-section"><div class="detail-section-title">Incidència i assistència mèdica</div>
     <div class="detail-grid">
       <div class="detail-item detail-full"><div class="detail-label">Incidència vinculada</div><div class="detail-value">${inc?`#${inc.id} — ${inc.categoria} (${formatData(inc.fecha)}) · ${inc.ubicacion}`:"—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Assistència mèdica</div><div class="detail-value">${a.medica}</div></div>
+      <div class="detail-item"><div class="detail-label">Asistencia médica</div><div class="detail-value">${a.medica}</div></div>
       <div class="detail-item"><div class="detail-label">Centre mèdic</div><div class="detail-value">${a.hospital||"—"}</div></div>
       <div class="detail-item detail-full"><div class="detail-label">Nº part mèdic</div><div class="detail-value">${a.partMedic||"—"}</div></div>
     </div></div>
@@ -300,7 +300,7 @@ function descarregarPlantillaPDF() {
 // BACKUP
 function renderBackup() {
   const mesos = [...new Set(incidencies.map(i=>i.fecha.slice(0,7)))].sort().reverse();
-  const noms = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
+  const noms = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   const container = document.getElementById("backup-months");
   if (!mesos.length) { container.innerHTML='<div style="color:#7A8FA6;font-size:13px;padding:12px">Encara no hi ha incidències registrades.</div>'; return; }
   container.innerHTML = mesos.map(m=>{
@@ -335,7 +335,7 @@ function exportarBackupMes(mes) {
 }
 
 function exportarBackupComplet() {
-  if(!incidencies.length){alert("No hi ha incidències per exportar.");return;}
+  if(!incidencies.length){alert("No hay incidencias para exportar.");return;}
   const txt=generarContingutBackup(incidencies);
   const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
   const url=URL.createObjectURL(blob);
@@ -349,3 +349,33 @@ function tancarModalFons(e,id){if(e.target===document.getElementById(id))tancarM
 // INIT
 actualitzarMetriques();
 renderTabla();
+
+
+/* === Capa de visualización en castellano (añadida) ===
+   Traduce SOLO las etiquetas visibles de categoría y estado que aún
+   se muestran con su clave interna (Robatori, Danys, Obert, etc.),
+   sin modificar los valores guardados. */
+(function(){
+  const LABELS = {
+    'Robatori':'Robo',
+    'Danys':'Daños',
+    'Accident Parking':'Accidente Parking',
+    'Accident CC':'Accidente CC',
+    'Incidència Baixa':'Incidencia leve',
+    'Obert':'Abierto',
+    'Tancat':'Cerrado'
+  };
+  function traducir(root){
+    const walker = document.createTreeWalker(root||document.body, NodeFilter.SHOW_TEXT);
+    let n;
+    while((n = walker.nextNode())){
+      const t = n.nodeValue.trim();
+      if(LABELS[t]) n.nodeValue = n.nodeValue.replace(t, LABELS[t]);
+    }
+  }
+  const obs = new MutationObserver(()=>traducir(document.body));
+  document.addEventListener('DOMContentLoaded', ()=>{
+    traducir(document.body);
+    obs.observe(document.body, {childList:true, subtree:true});
+  });
+})();
