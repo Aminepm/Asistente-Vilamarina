@@ -379,3 +379,62 @@ renderTabla();
     obs.observe(document.body, {childList:true, subtree:true});
   });
 })();
+
+
+/* ============================================================
+   CONEXIÓN CON GOOGLE SHEETS (Web App) — Vilamarina
+   Carga automáticamente las incidencias clasificadas por la IA.
+   Añadido automáticamente. No borrar.
+   ============================================================ */
+const VILAMARINA_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwhgSbeZUEA5aSLEA_O80OsLGVeFn-CLaQuX3rP14TNRQgN8ZSsvij-TWGIREvPBwD0/exec";
+
+function mapearFilaSheet(f, i) {
+  return {
+    id: "sheet-" + (f.fecha || "") + "-" + (f.hora || "") + "-" + i,
+    fecha: f.fecha || "",
+    hora: f.hora || "",
+    gravedad: f.gravedad || "",
+    categoria: f.categoria || "",
+    resum: f.resumen || "",
+    descripcion: f.original || f.resumen || "",
+    ubicacion: "Vilamarina",
+    vigilant: "",
+    accion: "",
+    estat: f.estat || "Obert",
+    correo: "",
+    origen: "sheets"
+  };
+}
+
+async function cargarDesdeSheets() {
+  try {
+    const resp = await fetch(VILAMARINA_WEBAPP_URL, { method: "GET" });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const filas = await resp.json();
+    if (!Array.isArray(filas)) return;
+
+    // Elimina las que ya venían de Sheets para no duplicar en recargas
+    incidencies = incidencies.filter(function (x) { return x.origen !== "sheets"; });
+
+    const nuevas = filas.map(mapearFilaSheet);
+    // Las más recientes primero
+    incidencies = nuevas.concat(incidencies);
+
+    if (typeof filtrar === "function") filtrar();
+    else if (typeof renderTabla === "function") renderTabla();
+    if (typeof actualitzarMetriques === "function") actualitzarMetriques();
+    console.log("[Vilamarina] Cargadas " + nuevas.length + " incidencias desde Google Sheets.");
+  } catch (e) {
+    console.warn("[Vilamarina] No se pudo cargar desde Google Sheets:", e.message);
+  }
+}
+
+// Carga al abrir la página
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", cargarDesdeSheets);
+} else {
+  cargarDesdeSheets();
+}
+
+// Refresco automático cada 5 minutos
+setInterval(cargarDesdeSheets, 5 * 60 * 1000);
