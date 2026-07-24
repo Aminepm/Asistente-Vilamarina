@@ -40,6 +40,8 @@ function filtrar() {
   var res = incidencies.filter(function(d){
     if (grav && d.gravedad !== grav) return false;
     if (cat && d.categoria !== cat) return false;
+    var ocultarOp = (function(){var e=document.getElementById("f-ocultar-operativa");return e?e.checked:false;})();
+    if (ocultarOp && d.categoria === "Operativa") return false;
     if (est && d.estat !== est) return false;
     if (mes && !((d.fecha||"").startsWith(mes) || (d.fecha||"").split("/").reverse().join("-").startsWith(mes))) return false;
     if (buscar){ var hay=((d.resum||"")+" "+(d.descripcion||"")+" "+(d.ubicacion||"")+" "+(d.categoria||"")).toLowerCase(); if(hay.indexOf(buscar)===-1) return false; }
