@@ -403,7 +403,7 @@ function mapearFilaSheet(f, i) {
     ubicacion: "Vilamarina",
     vigilant: "",
     accion: "",
-    estat: f.estat || (f.gravedad === "Crítica" ? "Obert" : "Tancat"),
+    estat: (f.gravedad === "Crítica" ? "Obert" : "Tancat"),
     correo: "",
     enlace: f.enlace || "",
     origen: "sheets"
