@@ -7,7 +7,7 @@ let incidenciaDetallActual = null;
 let afectatDetallActual = null;
 
 function formatData(f) { return f ? f.split("-").reverse().join("/") : "—"; }
-function getMesActual() { return new Date().toISOShtring().slice(0,7); }
+function getMesActual() { return new Date().toISOString().slice(0,7); }
 function badgeGravClass(g) { return {"Crítica":"badge-critica","Alta":"badge-alta","Media":"badge-media","Baja":"badge-baja"}[g]||""; }
 function badgeGravLabel(g) { return {"Crítica":"Crítica","Alta":"Alta","Media":"Mitja","Baja":"Baixa"}[g]||g; }
 function rowClass(g) { return {"Crítica":"row-crithica","Alta":"row-alta","Media":"row-media","Baja":"row-baja"}[g]||""; }
