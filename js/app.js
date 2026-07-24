@@ -10,7 +10,7 @@ function formatData(f) { return f ? f.split("-").reverse().join("/") : "—"; }
 function getMesActual() { return new Date().toISOString().slice(0,7); }
 function badgeGravClass(g) { return {"Crítica":"badge-critica","Alta":"badge-alta","Media":"badge-media","Baja":"badge-baja"}[g]||""; }
 function badgeGravLabel(g) { return {"Crítica":"Crítica","Alta":"Alta","Media":"Mitja","Baja":"Baixa"}[g]||g; }
-function rowClass(g) { return {"Crítica":"row-critica","Alta":"row-alta","Media":"row-media","Baja":"row-baja"}[g]||""; }
+function rowClass(g) { return {"Crítica":"row-crithica","Alta":"row-alta","Media":"row-media","Baja":"row-baja"}[g]||""; }
 
 function canviarVista(vista, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -66,7 +66,7 @@ function renderTabla() {
       <td class="td-muted" style="font-size:12px">${d.ubicacion}</td>
       <td style="font-size:12px;color:#4A5568;max-width:200px">${d.resum||d.descripcion}</td>
       <td><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="Ver incidencia(${d.id})">Ver incidencia</button></td>
+      <td><button class="btn btn-outline btn-sm" onclick="verIncidencia(${d.id})">Ver incidencia</button></td>
     </tr>`).join("");
 }
 
@@ -410,7 +410,7 @@ function mapearFilaSheet(f, i) {
   };
 }
 
-function Ver incidencia(id) {
+function verIncidencia(id) {
   var d = incidencies.find(function(i){ return i.id===id; });
   if (!d) return;
   if (d.enlace) { window.open(d.enlace, "_blank"); }
