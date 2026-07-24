@@ -423,7 +423,7 @@ async function cargarDesdeSheets() {
     var s = document.createElement("script");
     var terminado = false;
     window[cbName] = function (filas) {
-      terminado = true;
+      terminado = true; window.__vilaRetries = 0;
       try {
         if (Array.isArray(filas)) {
           incidencies = incidencies.filter(function (x) { return x.origen !== "sheets"; });
@@ -439,9 +439,9 @@ async function cargarDesdeSheets() {
       resolve();
     };
     s.src = VILAMARINA_WEBAPP_URL + "?callback=" + cbName + "&t=" + Date.now();
-    s.onerror = function () { if (!terminado) { console.warn("[Vilamarina] No se pudo cargar."); resolve(); } };
+    s.onerror = function () { if (!terminado) { terminado = true; delete window[cbName]; if (s.parentNode) s.parentNode.removeChild(s); if (window.__vilaRetries === undefined) window.__vilaRetries = 0; if (window.__vilaRetries < 4) { window.__vilaRetries++; console.warn("[Vilamarina] Reintentando carga (" + window.__vilaRetries + ")..."); setTimeout(function(){ cargarDesdeSheets().then(resolve); }, 1500); } else { console.warn("[Vilamarina] No se pudo cargar tras varios intentos."); resolve(); } } };
     document.body.appendChild(s);
-    setTimeout(function () { if (!terminado) resolve(); }, 10000);
+    setTimeout(function () { if (!terminado) { terminado = true; delete window[cbName]; if (s.parentNode) s.parentNode.removeChild(s); if (window.__vilaRetries === undefined) window.__vilaRetries = 0; if (window.__vilaRetries < 4) { window.__vilaRetries++; console.warn("[Vilamarina] Timeout, reintentando (" + window.__vilaRetries + ")..."); cargarDesdeSheets().then(resolve); } else { console.warn("[Vilamarina] No se pudo cargar tras varios intentos."); resolve(); } } }, 15000);
   });
 }
 
