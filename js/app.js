@@ -66,7 +66,7 @@ function renderTabla() {
       <td class="td-muted" style="font-size:12px">${d.ubicacion}</td>
       <td style="font-size:12px;color:#4A5568;max-width:200px">${d.resum||d.descripcion}</td>
       <td><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="verIncidencia(${d.id})">Ver incidencia</button></td>
+      <td><button class="btn btn-outline btn-sm" onclick="verIncidencia('${d.id}')">Ver incidencia</button></td>
     </tr>`).join("");
 }
 
