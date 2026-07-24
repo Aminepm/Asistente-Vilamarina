@@ -68,12 +68,14 @@
 <option value="Accident Parking">Accident Parking</option>
 <option value="Accident CC">Accident CC</option>
 <option value="Incidència Baixa">Incidencia leve</option>
+          <option value="Operativa">Operativa</option>
 </select>
 <select id="f-estat" onchange="renderTabla()">
 <option value="">Todos los estados</option>
 <option value="Obert">Abierto</option>
 <option value="Tancat">Cerrado</option>
 </select>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#4A5568;white-space:nowrap;cursor:pointer"><input type="checkbox" id="f-ocultar-operativa" onchange="renderTabla()"> Ocultar operativas</label>
 <select id="f-mes" onchange="renderTabla()">
 <option value="">Todos los meses</option>
 </select>
