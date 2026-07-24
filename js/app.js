@@ -66,7 +66,7 @@ function renderTabla() {
       <td class="td-muted" style="font-size:12px">${d.ubicacion}</td>
       <td style="font-size:12px;color:#4A5568;max-width:200px">${d.resum||d.descripcion}</td>
       <td><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="veure(${d.id})">Veure</button></td>
+      <td><button class="btn btn-outline btn-sm" onclick="Ver incidencia(${d.id})">Ver incidencia</button></td>
     </tr>`).join("");
 }
 
@@ -207,7 +207,7 @@ function renderAfectats() {
       <td class="td-muted" style="font-size:12px">${inc?`#${inc.id} ${inc.categoria} (${formatData(inc.fecha)})`:"—"}</td>
       <td><span class="badge ${a.medica==='Sí'?'badge-critica':'badge-baja'}">${a.medica}</span></td>
       <td><span class="badge ${a.consentiment==='Sí'?'badge-baja':'badge-alta'}">${a.consentiment}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="obrirDetallAfectat(${a.id})">Veure</button></td>
+      <td><button class="btn btn-outline btn-sm" onclick="obrirDetallAfectat(${a.id})">Ver incidencia</button></td>
     </tr>`;
   }).join("");
 }
@@ -410,7 +410,7 @@ function mapearFilaSheet(f, i) {
   };
 }
 
-function veure(id) {
+function Ver incidencia(id) {
   var d = incidencies.find(function(i){ return i.id===id; });
   if (!d) return;
   if (d.enlace) { window.open(d.enlace, "_blank"); }
