@@ -19,6 +19,7 @@ function canviarVista(vista, btn) {
   btn.classList.add('active');
   if (vista === 'afectats') renderAfectats();
   if (vista === 'backup') renderBackup();
+  if (vista === 'informes') renderInformes();
 }
 
 function omplirFiltresMesos() {
@@ -40,8 +41,6 @@ function filtrar() {
   var res = incidencies.filter(function(d){
     if (grav && d.gravedad !== grav) return false;
     if (cat && d.categoria !== cat) return false;
-    var ocultarOp = (function(){var e=document.getElementById("f-ocultar-operativa");return e?e.checked:false;})();
-    if (ocultarOp && d.categoria === "Operativa") return false;
     if (est && d.estat !== est) return false;
     if (mes && !((d.fecha||"").startsWith(mes) || (d.fecha||"").split("/").reverse().join("-").startsWith(mes))) return false;
     if (buscar){ var hay=((d.resum||"")+" "+(d.descripcion||"")+" "+(d.ubicacion||"")+" "+(d.categoria||"")).toLowerCase(); if(hay.indexOf(buscar)===-1) return false; }
@@ -189,6 +188,179 @@ function exportarCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href=url; a.download=`incidencies_vilamarina_${new Date().toISOString().slice(0,10)}.csv`; a.click();
   URL.revokeObjectURL(url);
+}
+
+// INFORMES
+var CATEGORIA_EXCLUIDA_INFORME = "Operativa";
+var INF_COLORS = {
+  "Robatori": "#ef4444",
+  "Danys": "#f59e0b",
+  "Accident Parking": "#8b5cf6",
+  "Accident CC": "#3b82f6",
+  "Incidència Baixa": "#10b981"
+};
+var INF_CATEGORIAS = ["Robatori","Danys","Accident Parking","Accident CC","Incidència Baixa"];
+var INF_MESOS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+function inicializarFechasInformes() {
+  var inputDesde = document.getElementById("inf-desde");
+  var inputHasta = document.getElementById("inf-hasta");
+  if (!inputDesde || !inputHasta) return;
+  if (!inputDesde.value && !inputHasta.value) {
+    var hoy = new Date().toISOString().slice(0,10);
+    inputDesde.value = hoy.slice(0,4) + "-01-01";
+    inputHasta.value = hoy;
+  }
+}
+
+function getRangoInformes() {
+  var el = function(id){ var e=document.getElementById(id); return e?e.value:""; };
+  return { desde: el("inf-desde"), hasta: el("inf-hasta") };
+}
+
+function incidenciesEnRango(desde, hasta) {
+  return incidencies.filter(function(d){
+    if (!d.fecha) return false;
+    if (desde && d.fecha < desde) return false;
+    if (hasta && d.fecha > hasta) return false;
+    return true;
+  });
+}
+
+function aplicarRangoInformes() { renderInformes(); }
+
+function establecerRangoYTD() {
+  var hoy = new Date().toISOString().slice(0,10);
+  document.getElementById("inf-desde").value = hoy.slice(0,4) + "-01-01";
+  document.getElementById("inf-hasta").value = hoy;
+  renderInformes();
+}
+
+function establecerRangoTodo() {
+  document.getElementById("inf-desde").value = "";
+  document.getElementById("inf-hasta").value = "";
+  renderInformes();
+}
+
+function nombreMes(m) {
+  var partes = m.split("-");
+  return INF_MESOS[parseInt(partes[1],10)-1] + " " + partes[0];
+}
+
+function datosGraficoTema(lista) {
+  var conteo = {};
+  lista.forEach(function(d){
+    if (d.categoria === CATEGORIA_EXCLUIDA_INFORME) return;
+    conteo[d.categoria] = (conteo[d.categoria]||0)+1;
+  });
+  return Object.keys(conteo).map(function(cat){
+    return { label: cat, value: conteo[cat], color: INF_COLORS[cat] || "#6b7280" };
+  }).sort(function(a,b){ return b.value-a.value; });
+}
+
+function construirGraficoCircular(datos) {
+  var total = datos.reduce(function(s,d){ return s+d.value; }, 0);
+  if (!total) return '<div style="color:#7A8FA6;font-size:13px;padding:12px">No hay incidencias en el rango seleccionado.</div>';
+  var radius = 64, cx = 76, cy = 76, sw = 30;
+  var circ = 2*Math.PI*radius;
+  var acumulado = 0;
+  var svg = '<svg width="152" height="152" viewBox="0 0 152 152">';
+  datos.forEach(function(d){
+    if (!d.value) return;
+    var frac = d.value/total;
+    var dash = frac*circ;
+    svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+radius+'" fill="none" stroke="'+d.color+'" stroke-width="'+sw+'" ' +
+      'stroke-dasharray="'+dash.toFixed(2)+' '+(circ-dash).toFixed(2)+'" stroke-dashoffset="'+(-acumulado).toFixed(2)+'" ' +
+      'transform="rotate(-90 '+cx+' '+cy+')"></circle>';
+    acumulado += dash;
+  });
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(radius-sw/2-2)+'" fill="#fff"></circle>';
+  svg += '<text x="'+cx+'" y="'+(cy+6)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#0F1B2D">'+total+'</text>';
+  svg += '</svg>';
+  var leyenda = '<div style="display:flex;flex-direction:column;gap:8px;min-width:160px">' + datos.filter(function(d){ return d.value>0; }).map(function(d){
+    var pct = Math.round(d.value/total*100);
+    return '<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#2C3E50">' +
+      '<span style="width:10px;height:10px;border-radius:50%;background:'+d.color+';display:inline-block;flex-shrink:0"></span>' +
+      '<span>'+d.label+'</span>' +
+      '<span style="margin-left:auto;color:#7A8FA6;font-size:12px">'+d.value+' · '+pct+'%</span></div>';
+  }).join('') + '</div>';
+  return svg + leyenda;
+}
+
+function resumenMensualCompleto(lista) {
+  var porMes = {};
+  lista.forEach(function(d){
+    var m = (d.fecha||"").slice(0,7);
+    if (!m) return;
+    if (!porMes[m]) {
+      porMes[m] = { mes:m, total:0, criticas:0, altas:0, medias:0, bajas:0, abiertas:0, cerradas:0, categorias:{} };
+      INF_CATEGORIAS.forEach(function(c){ porMes[m].categorias[c] = 0; });
+    }
+    var f = porMes[m];
+    f.total++;
+    if (d.gravedad==="Crítica") f.criticas++;
+    else if (d.gravedad==="Alta") f.altas++;
+    else if (d.gravedad==="Media") f.medias++;
+    else if (d.gravedad==="Baja") f.bajas++;
+    if (d.estat==="Obert") f.abiertas++; else f.cerradas++;
+    if (f.categorias[d.categoria] !== undefined) f.categorias[d.categoria]++;
+  });
+  return Object.keys(porMes).sort().map(function(m){ return porMes[m]; });
+}
+
+function renderInformes() {
+  inicializarFechasInformes();
+  var rango = getRangoInformes();
+  var lista = incidenciesEnRango(rango.desde, rango.hasta);
+  var grafico = document.getElementById("inf-grafico");
+  if (grafico) grafico.innerHTML = construirGraficoCircular(datosGraficoTema(lista));
+  var filas = resumenMensualCompleto(lista).slice().reverse();
+  var tbody = document.getElementById("inf-tbody-mensual");
+  if (tbody) {
+    tbody.innerHTML = filas.length ? filas.map(function(f){
+      return '<tr><td>'+nombreMes(f.mes)+'</td><td>'+f.total+'</td><td>'+f.criticas+'</td><td>'+f.altas+'</td><td>'+f.abiertas+'</td></tr>';
+    }).join("") : '<tr class="empty-row"><td colspan="5">No hay incidencias en el rango seleccionado.</td></tr>';
+  }
+}
+
+function exportarInformeMensualCSV(lista, sufijo) {
+  if (!lista.length) { alert("No hay incidencias en el rango seleccionado."); return; }
+  var filas = resumenMensualCompleto(lista);
+  var cap = ["Mes","Total","Críticas","Altas","Medias","Bajas","Robo","Daños","Accident Parking","Accident CC","Incidencia leve","Abiertas","Cerradas"];
+  var datos = filas.map(function(f){
+    return [nombreMes(f.mes), f.total, f.criticas, f.altas, f.medias, f.bajas,
+      f.categorias["Robatori"], f.categorias["Danys"], f.categorias["Accident Parking"], f.categorias["Accident CC"], f.categorias["Incidència Baixa"],
+      f.abiertas, f.cerradas];
+  });
+  var totalRow = ["TOTAL", lista.length,
+    filas.reduce(function(s,f){return s+f.criticas;},0), filas.reduce(function(s,f){return s+f.altas;},0),
+    filas.reduce(function(s,f){return s+f.medias;},0), filas.reduce(function(s,f){return s+f.bajas;},0),
+    filas.reduce(function(s,f){return s+f.categorias["Robatori"];},0), filas.reduce(function(s,f){return s+f.categorias["Danys"];},0),
+    filas.reduce(function(s,f){return s+f.categorias["Accident Parking"];},0), filas.reduce(function(s,f){return s+f.categorias["Accident CC"];},0),
+    filas.reduce(function(s,f){return s+f.categorias["Incidència Baixa"];},0),
+    filas.reduce(function(s,f){return s+f.abiertas;},0), filas.reduce(function(s,f){return s+f.cerradas;},0)];
+  var csv = [cap].concat(datos).concat([totalRow]).map(function(r){
+    return r.map(function(c){ return '"'+String(c==null?"":c).replace(/"/g,'""')+'"'; }).join(",");
+  }).join("\n");
+  var blob = new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a"); a.href=url; a.download="informe_mensual_"+sufijo+"_vilamarina.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function descargarInformeMensual() {
+  inicializarFechasInformes();
+  var rango = getRangoInformes();
+  var lista = incidenciesEnRango(rango.desde, rango.hasta);
+  var sufijo = (rango.desde||"inicio") + "_a_" + (rango.hasta||"actual");
+  exportarInformeMensualCSV(lista, sufijo);
+}
+
+function descargarInformeYTD() {
+  establecerRangoYTD();
+  var rango = getRangoInformes();
+  var lista = incidenciesEnRango(rango.desde, rango.hasta);
+  exportarInformeMensualCSV(lista, "YTD_" + rango.hasta.slice(0,4));
 }
 
 // AFECTATS
