@@ -347,10 +347,11 @@ function datosGraficoTema(lista) {
 function construirGraficoCircular(datos) {
   var total = datos.reduce(function(s,d){ return s+d.value; }, 0);
   if (!total) return '<div style="color:#7A8FA6;font-size:13px;padding:12px">No hay incidencias en el rango seleccionado.</div>';
-  var radius = 64, cx = 76, cy = 76, sw = 30;
+  var size = 180, cx = 90, cy = 90, radius = 62, sw = 26;
   var circ = 2*Math.PI*radius;
   var acumulado = 0;
-  var svg = '<svg width="152" height="152" viewBox="0 0 152 152">';
+  var svg = '<svg viewBox="0 0 '+size+' '+size+'" style="width:100%;height:auto;max-width:190px;overflow:visible">';
+  var etiquetas = '';
   datos.forEach(function(d){
     if (!d.value) return;
     var frac = d.value/total;
@@ -358,8 +359,17 @@ function construirGraficoCircular(datos) {
     svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+radius+'" fill="none" stroke="'+d.color+'" stroke-width="'+sw+'" ' +
       'stroke-dasharray="'+dash.toFixed(2)+' '+(circ-dash).toFixed(2)+'" stroke-dashoffset="'+(-acumulado).toFixed(2)+'" ' +
       'transform="rotate(-90 '+cx+' '+cy+')"></circle>';
+    var pct = Math.round(frac*100);
+    if (pct >= 6) {
+      var midFrac = (acumulado/circ) + frac/2;
+      var ang = (-90 + midFrac*360) * Math.PI/180;
+      var lx = cx + radius*Math.cos(ang);
+      var ly = cy + radius*Math.sin(ang);
+      etiquetas += '<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="700" fill="#fff">'+pct+'%</text>';
+    }
     acumulado += dash;
   });
+  svg += etiquetas;
   svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(radius-sw/2-2)+'" fill="#fff"></circle>';
   svg += '<text x="'+cx+'" y="'+(cy+6)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#0F1B2D">'+total+'</text>';
   svg += '</svg>';
@@ -414,7 +424,11 @@ function generarImagenGraficoCircularCanvas(datos, cssW, cssH) {
   var ctx = canvas.getContext("2d");
   ctx.scale(dpr, dpr);
   var total = datos.reduce(function(s,d){ return s+d.value; }, 0);
-  var cx = cssW/2, cy = cssH/2, radius = Math.min(cssW,cssH)/2 - 4, sw = radius*0.42;
+  var cx = cssW/2, cy = cssH/2;
+  var halfCanvas = Math.min(cssW,cssH)/2;
+  var margen = 4, proporcionTrazo = 0.32;
+  var radius = (halfCanvas - margen) / (1 + proporcionTrazo/2);
+  var sw = radius*proporcionTrazo;
   if (total) {
     var start = -Math.PI/2;
     datos.forEach(function(d){
@@ -425,6 +439,16 @@ function generarImagenGraficoCircularCanvas(datos, cssW, cssH) {
       ctx.lineWidth = sw;
       ctx.strokeStyle = d.color;
       ctx.stroke();
+      var pct = Math.round((d.value/total)*100);
+      if (pct >= 6) {
+        var midAng = start + ang/2;
+        var lx = cx + radius*Math.cos(midAng);
+        var ly = cy + radius*Math.sin(midAng);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold " + Math.round(cssH*0.055) + "px Helvetica, Arial, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(pct + "%", lx, ly);
+      }
       start += ang;
     });
   }
