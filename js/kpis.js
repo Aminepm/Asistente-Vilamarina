@@ -129,8 +129,11 @@
 
   function boot() {
     render();
-    // Redibujar periódicamente para reflejar altas/bajas y datos cargados desde Sheets.
-    setInterval(render, 3000);
+    // El propio app.js llama a window.renderKPIs() cuando cambian los datos
+    // (nueva incidencia, carga desde Sheets...). Nada de repintar a ciegas
+    // cada pocos segundos: eso recalculaba y volvía a pintar el panel sin
+    // parar, y cada repintado disparaba además el escaneo de traducción de
+    // toda la página.
   }
 
   if (document.readyState === 'loading') {

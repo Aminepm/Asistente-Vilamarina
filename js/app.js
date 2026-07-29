@@ -6,6 +6,35 @@ let nextAfectatId = 1;
 let incidenciaDetallActual = null;
 let afectatDetallActual = null;
 
+// jsPDF + jsPDF-autotable (~450 KB) solo hacen falta al generar un PDF, así
+// que no se cargan en el <head>/</body> de index.html: se inyectan la
+// primera vez que se necesitan (o antes, en un rato muerto del navegador),
+// para no retrasar la carga inicial de la página.
+let _pdfLibsPromise = null;
+function asegurarLibreriasPDF() {
+  if (_pdfLibsPromise) return _pdfLibsPromise;
+  _pdfLibsPromise = new Promise(function (resolve, reject) {
+    if (window.jspdf && window.jspdf.jsPDF) { resolve(); return; }
+    var s1 = document.createElement("script");
+    s1.src = "js/vendor/jspdf.umd.min.js";
+    s1.onload = function () {
+      var s2 = document.createElement("script");
+      s2.src = "js/vendor/jspdf.plugin.autotable.min.js";
+      s2.onload = function () { resolve(); };
+      s2.onerror = function () { reject(new Error("No se pudo cargar jspdf-autotable")); };
+      document.body.appendChild(s2);
+    };
+    s1.onerror = function () { reject(new Error("No se pudo cargar jsPDF")); };
+    document.body.appendChild(s1);
+  });
+  return _pdfLibsPromise;
+}
+(function precargarPDFEnRatoMuerto() {
+  var precargar = function () { asegurarLibreriasPDF().catch(function () {}); };
+  if ("requestIdleCallback" in window) requestIdleCallback(precargar, { timeout: 4000 });
+  else setTimeout(precargar, 2000);
+})();
+
 function formatData(f) { return f ? f.split("-").reverse().join("/") : "—"; }
 function getMesActual() { return new Date().toISOString().slice(0,7); }
 function badgeGravClass(g) { return {"Crítica":"badge-critica","Alta":"badge-alta","Media":"badge-media","Baja":"badge-baja"}[g]||""; }
@@ -198,6 +227,7 @@ function guardarIncidencia() {
   omplirFiltresMesos();
   renderTabla();
   renderMantenimiento();
+  if (typeof window.renderKPIs === "function") window.renderKPIs();
 }
 
 function exportarCSV() {
@@ -543,9 +573,10 @@ function tituloRangoInforme(rango) {
   return (rango.desde?formatData(rango.desde):"inicio") + "  —  " + (rango.hasta?formatData(rango.hasta):"actualidad");
 }
 
-function generarPDFInforme(lista, rango, sufijo) {
-  if (!window.jspdf || !window.jspdf.jsPDF) { alert("No se ha podido cargar el generador de PDF."); return; }
+async function generarPDFInforme(lista, rango, sufijo) {
   if (!lista.length) { alert("No hay incidencias en el rango seleccionado."); return; }
+  try { await asegurarLibreriasPDF(); } catch (e) { alert("No se ha podido cargar el generador de PDF."); return; }
+  if (!window.jspdf || !window.jspdf.jsPDF) { alert("No se ha podido cargar el generador de PDF."); return; }
   var jsPDF = window.jspdf.jsPDF;
   var doc = new jsPDF({ unit: "mm", format: "a4" });
   var margenIzq = 14, anchoUtil = 182;
@@ -770,7 +801,8 @@ function obrirDetallAfectat(id) {
   document.getElementById("modal-detall-afectat").classList.add("open");
 }
 
-function generarFichaAfectadoPDF(a, inc) {
+async function generarFichaAfectadoPDF(a, inc) {
+  try { await asegurarLibreriasPDF(); } catch (e) { alert("No se ha podido cargar el generador de PDF."); return; }
   if (!window.jspdf || !window.jspdf.jsPDF) { alert("No se ha podido cargar el generador de PDF."); return; }
   var jsPDF = window.jspdf.jsPDF;
   var doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -943,16 +975,16 @@ function generarFichaAfectadoPDF(a, inc) {
   return doc;
 }
 
-function descarregarFitxaAfectat() {
+async function descarregarFitxaAfectat() {
   if (!afectatDetallActual) return;
   const a = afectatDetallActual;
   const inc = incidencies.find(i=>i.id===a.incidenciaId);
-  const doc = generarFichaAfectadoPDF(a, inc);
+  const doc = await generarFichaAfectadoPDF(a, inc);
   if (doc) doc.save(`ficha_afectado_${a.nom.replace(/ /g,"_")}.pdf`);
 }
 
-function descarregarPlantillaPDF() {
-  const doc = generarFichaAfectadoPDF(null, null);
+async function descarregarPlantillaPDF() {
+  const doc = await generarFichaAfectadoPDF(null, null);
   if (doc) doc.save("plantilla_ficha_afectado_vilamarina.pdf");
 }
 
@@ -1024,17 +1056,30 @@ renderTabla();
     'Obert':'Abierto',
     'Tancat':'Cerrado'
   };
-  function traducir(root){
-    const walker = document.createTreeWalker(root||document.body, NodeFilter.SHOW_TEXT);
+  function traducirNodo(nodo){
+    if (nodo.nodeType === Node.TEXT_NODE) {
+      const t = nodo.nodeValue.trim();
+      if (LABELS[t]) nodo.nodeValue = nodo.nodeValue.replace(t, LABELS[t]);
+      return;
+    }
+    if (nodo.nodeType !== Node.ELEMENT_NODE) return;
+    const walker = document.createTreeWalker(nodo, NodeFilter.SHOW_TEXT);
     let n;
     while((n = walker.nextNode())){
       const t = n.nodeValue.trim();
       if(LABELS[t]) n.nodeValue = n.nodeValue.replace(t, LABELS[t]);
     }
   }
-  const obs = new MutationObserver(()=>traducir(document.body));
+  // Solo recorre los nodos que se acaban de añadir en cada tanda de cambios,
+  // no la página entera: con la tabla de incidencias creciendo y el panel de
+  // KPIs repintándose, escanear todo el <body> en cada mutación era caro.
+  const obs = new MutationObserver((mutaciones)=>{
+    mutaciones.forEach((m)=>{
+      m.addedNodes.forEach(traducirNodo);
+    });
+  });
   document.addEventListener('DOMContentLoaded', ()=>{
-    traducir(document.body);
+    traducirNodo(document.body);
     obs.observe(document.body, {childList:true, subtree:true});
   });
 })();
@@ -1089,6 +1134,8 @@ async function cargarDesdeSheets() {
           incidencies = nuevas.concat(incidencies);
           if (typeof renderTabla === "function") renderTabla();
           if (typeof actualitzarMetriques === "function") actualitzarMetriques();
+          if (typeof renderMantenimiento === "function") renderMantenimiento();
+          if (typeof window.renderKPIs === "function") window.renderKPIs();
           console.log("[Vilamarina] Cargadas " + nuevas.length + " incidencias desde Google Sheets.");
         }
       } catch (e) { console.warn("[Vilamarina] Error procesando datos:", e.message); }
