@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  var EXCLUIR = { 'Operativa': 1, 'Incidencia Baixa': 1 };
+  var EXCLUIR = { 'Operativa': 1, 'Incidència Baixa': 1 };
 
   function esNocturno(hora) {
     var hh = parseInt(String(hora || '').split(':')[0], 10);

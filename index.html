@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="ca">
+<html lang="es">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -159,6 +159,7 @@
 <label style="font-size:12px;font-weight:600;color:#5A6B7B">Desde <input id="inf-desde" type="date"/></label>
 <label style="font-size:12px;font-weight:600;color:#5A6B7B">Hasta <input id="inf-hasta" type="date"/></label>
 <button class="btn btn-outline btn-sm" onclick="aplicarRangoInformes()">Aplicar</button>
+<button class="btn btn-outline btn-sm" onclick="establecerRangoMTD()">Mes en curso (MTD)</button>
 <button class="btn btn-outline btn-sm" onclick="establecerRangoYTD()">Año en curso (YTD)</button>
 <button class="btn btn-outline btn-sm" onclick="establecerRangoTodo()">Todo el histórico</button>
 </div>
@@ -176,6 +177,20 @@
 </table></div>
 </div>
 </div>
+<div class="panel" style="padding:18px 20px;margin-bottom:16px;background:radial-gradient(140% 140% at 100% 0%, rgba(20,184,166,0.10), transparent 55%), #fff;box-shadow:0 1px 3px rgba(15,27,45,0.06)">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+<h3 style="font-size:15px;margin:0">Evolución mensual de incidencias</h3>
+<span style="color:#B7C0CA;font-size:16px;letter-spacing:1px;line-height:1">⋯</span>
+</div>
+<div id="inf-grafico-lineal"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#4A5568">
+<span style="width:10px;height:10px;border-radius:3px;background:#14b8a6;display:inline-block"></span>
+          Total de incidencias
+        </div>
+<div id="inf-lineal-actualizado" style="font-size:11px;color:#9AA6B2;font-style:italic"></div>
+</div>
+</div>
 <div class="backup-panel">
 <h3>Descargar informes</h3>
 <p>El informe en PDF desglosa, mes a mes, el número de incidencias, su gravedad y su tema dentro del rango de fechas seleccionado, listo para imprimir o enviar.</p>
@@ -184,13 +199,13 @@
 <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
           Descargar informe PDF (rango actual)
         </button>
+<button class="btn btn-outline" onclick="descargarInformeMTDPDF()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+          Descargar informe PDF mes en curso (MTD)
+        </button>
 <button class="btn btn-accent" onclick="descargarInformeYTDPDF()">
 <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
           Descargar informe PDF año en curso (YTD)
-        </button>
-<button class="btn btn-outline" onclick="descargarInformeMensual()">
-<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
-          Exportar datos en CSV (rango actual)
         </button>
 </div>
 </div>
@@ -281,11 +296,11 @@
 <div class="form-section">
 <div class="form-section-title">Imágenes / Vídeos de seguridad</div>
 <div class="form-row cols-2">
-<div class="form-group"><label>Nombre de la carpeta</label><input id="n-img-carpeta" placeholder="Ex: INC_20250620_001" type="text"/></div>
-<div class="form-group"><label>Ubicación / Ruta</label><input id="n-img-ruta" placeholder="Ex: \\servidor\seguretat\2025\juny\" type="text"/></div>
+<div class="form-group"><label>Nombre de la carpeta</label><input id="n-img-carpeta" placeholder="Ej: INC_20250620_001" type="text"/></div>
+<div class="form-group"><label>Ubicación / Ruta</label><input id="n-img-ruta" placeholder="Ej: \\servidor\seguridad\2025\junio\" type="text"/></div>
 </div>
 <div class="form-row">
-<div class="form-group"><label>Observaciones sobre las imágenes</label><input id="n-img-obs" placeholder="Ex: 3 arxius MP4, càmera entrada principal" type="text"/></div>
+<div class="form-group"><label>Observaciones sobre las imágenes</label><input id="n-img-obs" placeholder="Ej: 3 archivos MP4, cámara entrada principal" type="text"/></div>
 </div>
 </div>
 <div class="form-section">
@@ -332,7 +347,7 @@
 <div class="form-section">
 <div class="form-section-title">Datos personales</div>
 <div class="form-row cols-2">
-<div class="form-group"><label>Nombre completo *</label><input id="a-nom" placeholder="Nom i cognoms" type="text"/></div>
+<div class="form-group"><label>Nombre completo *</label><input id="a-nom" placeholder="Nombre y apellidos" type="text"/></div>
 <div class="form-group"><label>DNI / NIE / Pasaporte *</label><input id="a-dni" placeholder="00000000A" type="text"/></div>
 </div>
 <div class="form-row cols-2">
@@ -340,8 +355,8 @@
 <div class="form-group"><label>Teléfono *</label><input id="a-tel" placeholder="6XX XXX XXX" type="tel"/></div>
 </div>
 <div class="form-row cols-2">
-<div class="form-group"><label>Correo electrónico</label><input id="a-email" placeholder="exemple@correu.com" type="email"/></div>
-<div class="form-group"><label>Dirección completa</label><input id="a-adreca" placeholder="Carrer, número, CP, població" type="text"/></div>
+<div class="form-group"><label>Correo electrónico</label><input id="a-email" placeholder="ejemplo@correo.com" type="email"/></div>
+<div class="form-group"><label>Dirección completa</label><input id="a-adreca" placeholder="Calle, número, CP, población" type="text"/></div>
 </div>
 </div>
 <div class="form-section">
@@ -351,26 +366,26 @@
 <div class="form-group"><label>¿Requirió asistencia médica?</label><select id="a-medica"><option value="No">No</option><option value="Sí">Sí</option></select></div>
 </div>
 <div class="form-row cols-2">
-<div class="form-group"><label>Centro médico / Hospital</label><input id="a-hospital" placeholder="On va ser atès" type="text"/></div>
-<div class="form-group"><label>Nº de parte médico</label><input id="a-part-medic" placeholder="Referència del part" type="text"/></div>
+<div class="form-group"><label>Centro médico / Hospital</label><input id="a-hospital" placeholder="Dónde fue atendido" type="text"/></div>
+<div class="form-group"><label>Nº de parte médico</label><input id="a-part-medic" placeholder="Referencia del parte" type="text"/></div>
 </div>
 <div class="form-row cols-3">
-<div class="form-group"><label>Número de matrícula</label><input id="a-matricula" placeholder="Ex: 1234 ABC" type="text"/></div>
-<div class="form-group"><label>Nº identificativo ambulancia</label><input id="a-num-ambulancia" placeholder="Referència del servei" type="text"/></div>
-<div class="form-group"><label>Técnico responsable / médico</label><input id="a-tecnico" placeholder="Nom del tècnic o metge" type="text"/></div>
+<div class="form-group"><label>Número de matrícula</label><input id="a-matricula" placeholder="Ej: 1234 ABC" type="text"/></div>
+<div class="form-group"><label>Nº identificativo ambulancia</label><input id="a-num-ambulancia" placeholder="Referencia del servicio" type="text"/></div>
+<div class="form-group"><label>Técnico responsable / médico</label><input id="a-tecnico" placeholder="Nombre del técnico o médico" type="text"/></div>
 </div>
 </div>
 <div class="form-section">
 <div class="form-section-title">Declaración del afectado</div>
 <div class="form-row">
-<div class="form-group"><label>Descripción de los hechos (versión del afectado)</label><textarea id="a-declaracio" placeholder="El que declara el propi client sobre el que va ocórrer..."></textarea></div>
+<div class="form-group"><label>Descripción de los hechos (versión del afectado)</label><textarea id="a-declaracio" placeholder="Lo que declara el propio cliente sobre lo que ocurrió..."></textarea></div>
 </div>
 <div class="form-row cols-2">
 <div class="form-group"><label>¿Firma consentimiento de datos?</label><select id="a-consentiment"><option value="Sí">Sí</option><option value="No">No</option><option value="Pendent">Pendiente</option></select></div>
 <div class="form-group"><label>¿Hay testigos?</label><select id="a-testimonis" onchange="toggleTestimoni()"><option value="No">No</option><option value="Sí">Sí</option></select></div>
 </div>
 <div class="form-row cols-2" id="bloc-testimoni" style="display:none">
-<div class="form-group"><label>Nombre del testigo</label><input id="a-test-nom" placeholder="Nom complet" type="text"/></div>
+<div class="form-group"><label>Nombre del testigo</label><input id="a-test-nom" placeholder="Nombre completo" type="text"/></div>
 <div class="form-group"><label>Teléfono del testigo</label><input id="a-test-tel" placeholder="6XX XXX XXX" type="tel"/></div>
 </div>
 </div>
@@ -402,6 +417,6 @@
 <script src="js/vendor/jspdf.umd.min.js"></script>
 <script src="js/vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="js/vendor/logo-vilamarina.js"></script>
-<script src="js/kpis.js?v=1"></script>
-<script src="js/app.js?v=13"></script></body>
+<script src="js/kpis.js?v=2"></script>
+<script src="js/app.js?v=15"></script></body>
 </html>
