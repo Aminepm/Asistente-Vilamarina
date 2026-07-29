@@ -177,9 +177,19 @@
 </table></div>
 </div>
 </div>
-<div class="panel" style="padding:18px 20px;margin-bottom:16px">
-<h3 style="font-size:15px;margin-bottom:12px">Evolución mensual de incidencias</h3>
+<div class="panel" style="padding:18px 20px;margin-bottom:16px;background:radial-gradient(140% 140% at 100% 0%, rgba(20,184,166,0.10), transparent 55%), #fff;box-shadow:0 1px 3px rgba(15,27,45,0.06)">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+<h3 style="font-size:15px;margin:0">Evolución mensual de incidencias</h3>
+<span style="color:#B7C0CA;font-size:16px;letter-spacing:1px;line-height:1">⋯</span>
+</div>
 <div id="inf-grafico-lineal"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#4A5568">
+<span style="width:10px;height:10px;border-radius:3px;background:#14b8a6;display:inline-block"></span>
+          Total de incidencias
+        </div>
+<div id="inf-lineal-actualizado" style="font-size:11px;color:#9AA6B2;font-style:italic"></div>
+</div>
 </div>
 <div class="backup-panel">
 <h3>Descargar informes</h3>
@@ -408,5 +418,5 @@
 <script src="js/vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="js/vendor/logo-vilamarina.js"></script>
 <script src="js/kpis.js?v=2"></script>
-<script src="js/app.js?v=14"></script></body>
+<script src="js/app.js?v=15"></script></body>
 </html>

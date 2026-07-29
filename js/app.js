@@ -305,32 +305,34 @@ function construirGraficoCircular(datos) {
   return svg + leyenda;
 }
 
+var INF_COLOR_LINEA = "#14b8a6";
+
+function trazoSuave(pts) {
+  var d = 'M'+pts[0].x+','+pts[0].y;
+  for (var i=1; i<pts.length; i++) {
+    var xc = (pts[i-1].x+pts[i].x)/2, yc = (pts[i-1].y+pts[i].y)/2;
+    d += ' Q'+pts[i-1].x+','+pts[i-1].y+' '+xc+','+yc;
+  }
+  if (pts.length>1) d += ' L'+pts[pts.length-1].x+','+pts[pts.length-1].y;
+  return d;
+}
+
 function construirGraficoLineal(filasMes) {
   if (!filasMes.length) return '<div style="color:#7A8FA6;font-size:13px;padding:12px">No hay incidencias en el rango seleccionado.</div>';
-  var width = 760, height = 220, padding = { left: 34, right: 16, top: 16, bottom: 30 };
+  var width = 760, height = 200, padding = { left: 26, right: 16, top: 16, bottom: 28 };
   var plotW = width - padding.left - padding.right, plotH = height - padding.top - padding.bottom;
   var maxV = Math.max.apply(null, filasMes.map(function(f){ return f.total; }).concat([1]));
   var stepX = filasMes.length > 1 ? plotW/(filasMes.length-1) : 0;
   function xAt(i) { return padding.left + (filasMes.length>1 ? stepX*i : plotW/2); }
   function yAt(v) { return padding.top + plotH - (maxV>0 ? (v/maxV)*plotH : 0); }
+  var pts = filasMes.map(function(f,i){ return { x: xAt(i), y: yAt(f.total) }; });
   var svg = '<svg viewBox="0 0 '+width+' '+height+'" style="width:100%;height:auto;max-width:100%">';
-  var pasos = 4;
-  for (var i=0; i<=pasos; i++) {
-    var y = padding.top + plotH - (plotH*i/pasos);
-    var val = Math.round(maxV*i/pasos);
-    svg += '<line x1="'+padding.left+'" y1="'+y+'" x2="'+(width-padding.right)+'" y2="'+y+'" stroke="#E2E6EA" stroke-width="1"/>';
-    svg += '<text x="'+(padding.left-8)+'" y="'+(y+3)+'" font-size="10" fill="#7A8FA6" text-anchor="end">'+val+'</text>';
-  }
-  var puntos = filasMes.map(function(f,i){ return xAt(i)+","+yAt(f.total); });
-  var areaPath = 'M'+puntos.join(' L')+' L'+xAt(filasMes.length-1)+','+(padding.top+plotH)+' L'+xAt(0)+','+(padding.top+plotH)+' Z';
-  svg += '<path d="'+areaPath+'" fill="#F59E0B" fill-opacity="0.12"></path>';
-  svg += '<polyline points="'+puntos.join(' ')+'" fill="none" stroke="#F59E0B" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"></polyline>';
+  svg += '<text x="8" y="'+(padding.top+plotH/2)+'" font-size="10" fill="#9AA6B2" text-anchor="middle" transform="rotate(-90 8 '+(padding.top+plotH/2)+')">Incidencias</text>';
+  svg += '<path d="'+trazoSuave(pts)+'" fill="none" stroke="'+INF_COLOR_LINEA+'" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"></path>';
   var etiquetaCada = Math.ceil(filasMes.length/10) || 1;
   filasMes.forEach(function(f,i){
-    var x = xAt(i), y = yAt(f.total);
-    svg += '<circle cx="'+x+'" cy="'+y+'" r="3" fill="#0F1B2D"></circle>';
     if (i % etiquetaCada === 0 || i === filasMes.length-1) {
-      svg += '<text x="'+x+'" y="'+(height-10)+'" font-size="10" fill="#5A6B7B" text-anchor="middle">'+nombreMesCorto(f.mes)+'</text>';
+      svg += '<text x="'+xAt(i)+'" y="'+(height-8)+'" font-size="10" fill="#9AA6B2" text-anchor="middle">'+nombreMesCorto(f.mes)+'</text>';
     }
   });
   svg += '</svg>';
@@ -371,39 +373,24 @@ function generarImagenGraficoLinealCanvas(filasMes, cssW, cssH) {
   canvas.width = cssW*dpr; canvas.height = cssH*dpr;
   var ctx = canvas.getContext("2d");
   ctx.scale(dpr, dpr);
-  var padding = { left: 30, right: 8, top: 10, bottom: 20 };
+  var padding = { left: 20, right: 20, top: 10, bottom: 20 };
   var plotW = cssW-padding.left-padding.right, plotH = cssH-padding.top-padding.bottom;
-  var maxV = Math.max.apply(null, filasMes.map(function(f){ return f.total; }).concat([1]));
-  ctx.strokeStyle = "#E2E6EA"; ctx.lineWidth = 1;
-  ctx.font = "9px Helvetica, Arial, sans-serif"; ctx.fillStyle = "#7A8FA6";
-  var pasos = 4;
-  for (var i=0; i<=pasos; i++) {
-    var y = padding.top + plotH - (plotH*i/pasos);
-    ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(cssW-padding.right, y); ctx.stroke();
-    ctx.textAlign = "right";
-    ctx.fillText(String(Math.round(maxV*i/pasos)), padding.left-5, y+3);
-  }
   if (!filasMes.length) return canvas;
+  var maxV = Math.max.apply(null, filasMes.map(function(f){ return f.total; }).concat([1]));
   var stepX = filasMes.length > 1 ? plotW/(filasMes.length-1) : 0;
   function xAt(i) { return padding.left + (filasMes.length>1 ? stepX*i : plotW/2); }
   function yAt(v) { return padding.top + plotH - (maxV>0 ? (v/maxV)*plotH : 0); }
+  var pts = filasMes.map(function(f,i){ return { x: xAt(i), y: yAt(f.total) }; });
   ctx.beginPath();
-  filasMes.forEach(function(f,i){ var x=xAt(i), y2=yAt(f.total); if (i===0) ctx.moveTo(x,y2); else ctx.lineTo(x,y2); });
-  ctx.lineTo(xAt(filasMes.length-1), padding.top+plotH);
-  ctx.lineTo(xAt(0), padding.top+plotH);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(245,158,11,0.14)";
-  ctx.fill();
-  ctx.beginPath();
-  filasMes.forEach(function(f,i){ var x=xAt(i), y2=yAt(f.total); if (i===0) ctx.moveTo(x,y2); else ctx.lineTo(x,y2); });
-  ctx.strokeStyle = "#F59E0B"; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
-  ctx.fillStyle = "#0F1B2D";
-  filasMes.forEach(function(f,i){
-    var x = xAt(i), y2 = yAt(f.total);
-    ctx.beginPath(); ctx.arc(x, y2, 2.2, 0, Math.PI*2); ctx.fill();
-  });
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (var i=1; i<pts.length; i++) {
+    var xc = (pts[i-1].x+pts[i].x)/2, yc = (pts[i-1].y+pts[i].y)/2;
+    ctx.quadraticCurveTo(pts[i-1].x, pts[i-1].y, xc, yc);
+  }
+  if (pts.length>1) ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+  ctx.strokeStyle = INF_COLOR_LINEA; ctx.lineWidth = 2.4; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
   var etiquetaCada = Math.ceil(filasMes.length/7) || 1;
-  ctx.fillStyle = "#5A6B7B"; ctx.textAlign = "center"; ctx.font = "8px Helvetica, Arial, sans-serif";
+  ctx.fillStyle = "#9AA6B2"; ctx.textAlign = "center"; ctx.font = "8px Helvetica, Arial, sans-serif";
   filasMes.forEach(function(f,i){
     if (i % etiquetaCada !== 0 && i !== filasMes.length-1) return;
     ctx.fillText(nombreMesCorto(f.mes), xAt(i), cssH-6);
@@ -441,6 +428,8 @@ function renderInformes() {
   var filasAsc = resumenMensualCompleto(lista);
   var graficoLineal = document.getElementById("inf-grafico-lineal");
   if (graficoLineal) graficoLineal.innerHTML = construirGraficoLineal(filasAsc);
+  var actualizado = document.getElementById("inf-lineal-actualizado");
+  if (actualizado) actualizado.textContent = "Última actualización " + new Date().toLocaleTimeString("es-ES");
   var filas = filasAsc.slice().reverse();
   var tbody = document.getElementById("inf-tbody-mensual");
   if (tbody) {
