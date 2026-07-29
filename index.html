@@ -22,6 +22,7 @@
 <button class="nav-btn active" onclick="canviarVista('incidencies', this)">Incidencias</button>
 <button class="nav-btn" onclick="canviarVista('afectats', this)">Afectados</button>
 <button class="nav-btn" onclick="canviarVista('informes', this)">Informes</button>
+<button class="nav-btn" onclick="canviarVista('mantenimiento', this)">Mantenimiento</button>
 <button class="nav-btn" onclick="canviarVista('backup', this)">Copias de seguridad</button>
 </div>
 </div>
@@ -210,6 +211,60 @@
 </div>
 </div>
 </div>
+<!-- MANTENIMENT -->
+<div class="view" id="view-mantenimiento">
+<div class="page-header">
+<div>
+<h1>Mantenimiento y Operativa</h1>
+<p>Averías, avisos técnicos y tareas operativas — independientes del registro de incidencias de seguridad</p>
+</div>
+<div class="header-actions">
+<button class="btn btn-accent" onclick="obrirModalNova('Mantenimiento')">
+<svg viewbox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"></line><line x1="5" x2="19" y1="12" y2="12"></line></svg>
+          Nuevo aviso de mantenimiento
+        </button>
+</div>
+</div>
+<div class="metrics">
+<div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="mt-total">0</div></div>
+<div class="metric"><div class="metric-label">Abiertas</div><div class="metric-value blue" id="mt-abiertas">0</div></div>
+<div class="metric"><div class="metric-label">Cerradas</div><div class="metric-value green" id="mt-cerradas">0</div></div>
+<div class="metric"><div class="metric-label">Este mes</div><div class="metric-value amber" id="mt-mes">0</div></div>
+</div>
+<div class="panel">
+<div class="panel-header">
+<div class="filters">
+<input id="mt-buscar" oninput="renderMantenimiento()" placeholder="Buscar..." type="text"/>
+<select id="mt-categoria" onchange="renderMantenimiento()">
+<option value="">Todas las categorías</option>
+<option value="Mantenimiento">Mantenimiento</option>
+<option value="Operativa">Operativa</option>
+</select>
+<select id="mt-estat" onchange="renderMantenimiento()">
+<option value="">Todos los estados</option>
+<option value="Obert">Abierto</option>
+<option value="Tancat">Cerrado</option>
+</select>
+</div>
+</div>
+<div style="overflow-x:auto">
+<table>
+<thead>
+<tr>
+<th style="width:85px">Fecha</th>
+<th style="width:60px">Hora</th>
+<th style="width:130px">Categoría</th>
+<th style="width:150px">Ubicación</th>
+<th>Resumen</th>
+<th style="width:80px">Estado</th>
+<th style="width:80px">Acciones</th>
+</tr>
+</thead>
+<tbody id="tbody-mantenimiento"></tbody>
+</table>
+</div>
+</div>
+</div>
 <!-- BACKUP -->
 <div class="view" id="view-backup">
 <div class="page-header">
@@ -239,7 +294,7 @@
 <div class="modal-overlay" id="modal-nova" onclick="tancarModalFons(event,'modal-nova')">
 <div class="modal">
 <div class="modal-header">
-<h2>Nueva incidencia</h2>
+<h2 id="modal-nova-titol">Nueva incidencia</h2>
 <button class="modal-close" onclick="tancarModal('modal-nova')">✕</button>
 </div>
 <div class="modal-body">
@@ -268,6 +323,7 @@
 <option value="Accident Parking">Accident Parking</option>
 <option value="Accident CC">Accident CC</option>
 <option value="Incidència Baixa">Incidencia leve</option>
+<option value="Mantenimiento">Mantenimiento</option>
 </select>
 </div>
 </div>
@@ -417,6 +473,6 @@
 <script src="js/vendor/jspdf.umd.min.js"></script>
 <script src="js/vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="js/vendor/logo-vilamarina.js"></script>
-<script src="js/kpis.js?v=2"></script>
-<script src="js/app.js?v=15"></script></body>
+<script src="js/kpis.js?v=3"></script>
+<script src="js/app.js?v=16"></script></body>
 </html>

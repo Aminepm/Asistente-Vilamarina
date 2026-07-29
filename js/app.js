@@ -12,6 +12,19 @@ function badgeGravClass(g) { return {"Crítica":"badge-critica","Alta":"badge-al
 function badgeGravLabel(g) { return {"Crítica":"Crítica","Alta":"Alta","Media":"Media","Baja":"Baja"}[g]||g; }
 function rowClass(g) { return {"Crítica":"row-crithica","Alta":"row-alta","Media":"row-media","Baja":"row-baja"}[g]||""; }
 
+var CATEGORIAS_NO_INCIDENCIA = { "Operativa": 1, "Mantenimiento": 1 };
+function esCategoriaOperativa(cat) { return !!CATEGORIAS_NO_INCIDENCIA[cat]; }
+
+var PALABRAS_MANTENIMIENTO = ["schindler", "ascensor", "elevador", "montacargas"];
+function esTextoMantenimiento(d) {
+  var texto = ((d.resum||"") + " " + (d.descripcion||"") + " " + (d.correo||"")).toLowerCase();
+  return PALABRAS_MANTENIMIENTO.some(function(p){ return texto.indexOf(p) !== -1; });
+}
+function categoriaEfectiva(d) {
+  if (d.categoria === "Incidència Baixa" && esTextoMantenimiento(d)) return "Mantenimiento";
+  return d.categoria;
+}
+
 function canviarVista(vista, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -20,10 +33,11 @@ function canviarVista(vista, btn) {
   if (vista === 'afectats') renderAfectats();
   if (vista === 'backup') renderBackup();
   if (vista === 'informes') renderInformes();
+  if (vista === 'mantenimiento') renderMantenimiento();
 }
 
 function omplirFiltresMesos() {
-  const mesos = [...new Set(incidencies.map(i => i.fecha.slice(0,7)))].sort().reverse();
+  const mesos = [...new Set(incidencies.filter(i => !esCategoriaOperativa(i.categoria)).map(i => i.fecha.slice(0,7)))].sort().reverse();
   const sel = document.getElementById("f-mes");
   sel.innerHTML = '<option value="">Todos los meses</option>';
   const noms = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -39,6 +53,7 @@ function filtrar() {
   var grav = el("f-gravedad")||""; var cat = el("f-categoria")||"";
   var est = el("f-estat")||""; var mes = el("f-mes")||"";
   var res = incidencies.filter(function(d){
+    if (esCategoriaOperativa(d.categoria)) return false;
     if (grav && d.gravedad !== grav) return false;
     if (cat && d.categoria !== cat) return false;
     if (est && d.estat !== est) return false;
@@ -53,7 +68,8 @@ function renderTabla() {
   const filtrats = filtrar();
   const tbody = document.getElementById("tbody");
   if (!filtrats.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📋</div>${incidencies.length === 0 ? "Aún no hay incidencias registradas.<br><small>Haz clic en <strong>Nueva incidencia</strong> para añadir una.</small>" : "Ninguna incidencia coincide con los filtros seleccionados."}</td></tr>`;
+    const hayIncidencias = incidencies.some(d => !esCategoriaOperativa(d.categoria));
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📋</div>${!hayIncidencias ? "Aún no hay incidencias registradas.<br><small>Haz clic en <strong>Nueva incidencia</strong> para añadir una.</small>" : "Ninguna incidencia coincide con los filtros seleccionados."}</td></tr>`;
     return;
   }
   tbody.innerHTML = filtrats.map(d => `
@@ -71,19 +87,20 @@ function renderTabla() {
 
 function actualitzarMetriques() {
   const mes = getMesActual();
-  document.getElementById("m-total").textContent = incidencies.length;
-  document.getElementById("m-critica").textContent = incidencies.filter(d=>d.gravedad==="Crítica").length;
-  document.getElementById("m-alta").textContent = incidencies.filter(d=>d.gravedad==="Alta").length;
-  document.getElementById("m-obertes").textContent = incidencies.filter(d=>d.estat==="Obert").length;
-  document.getElementById("m-mes").textContent = incidencies.filter(d=>d.fecha.startsWith(mes)).length;
+  const reales = incidencies.filter(d => !esCategoriaOperativa(d.categoria));
+  document.getElementById("m-total").textContent = reales.length;
+  document.getElementById("m-critica").textContent = reales.filter(d=>d.gravedad==="Crítica").length;
+  document.getElementById("m-alta").textContent = reales.filter(d=>d.gravedad==="Alta").length;
+  document.getElementById("m-obertes").textContent = reales.filter(d=>d.estat==="Obert").length;
+  document.getElementById("m-mes").textContent = reales.filter(d=>d.fecha.startsWith(mes)).length;
 }
 
 function obrirDetall(id) {
   const d = incidencies.find(i=>i.id===id);
   if (!d) return;
   incidenciaDetallActual = d;
-  document.getElementById("detall-titol").textContent = `Incidencia #${d.id} — ${catEs(d.categoria)}`;
-  document.getElementById("btn-toggle-estat").textContent = d.estat==="Obert" ? "Marcar como cerrado" : "Reabrir incidencia";
+  document.getElementById("detall-titol").textContent = `#${d.id} — ${catEs(d.categoria)}`;
+  document.getElementById("btn-toggle-estat").textContent = d.estat==="Obert" ? "Marcar como cerrado" : "Reabrir";
   const af = afectats.filter(a=>a.incidenciaId===d.id);
   document.getElementById("detall-body").innerHTML = `
     <div class="detail-section">
@@ -130,15 +147,17 @@ function descarregarCorreo() {
   URL.revokeObjectURL(url);
 }
 
-function obrirModalNova() {
+function obrirModalNova(categoriaDefecto) {
   const hoy = new Date().toISOString().slice(0,10);
   const hora = new Date().toTimeString().slice(0,5);
   ["n-ubicacion","n-vigilant","n-descripcion","n-resum","n-accion","n-correo","n-img-carpeta","n-img-ruta","n-img-obs"].forEach(id => document.getElementById(id).value="");
   document.getElementById("n-fecha").value = hoy;
   document.getElementById("n-hora").value = hora;
   document.getElementById("n-gravedad").value = "Media";
-  document.getElementById("n-categoria").value = "Incidència Baixa";
+  document.getElementById("n-categoria").value = categoriaDefecto || "Incidència Baixa";
   document.querySelector('input[name="n-estat"][value="Obert"]').checked = true;
+  const titulo = document.getElementById("modal-nova-titol");
+  if (titulo) titulo.textContent = categoriaDefecto === "Mantenimiento" ? "Nuevo aviso de mantenimiento" : "Nueva incidencia";
   document.getElementById("modal-nova").classList.add("open");
 }
 
@@ -157,7 +176,7 @@ function guardarIncidencia() {
   const ubicacion = document.getElementById("n-ubicacion").value.trim();
   const descripcion = document.getElementById("n-descripcion").value.trim();
   if (!fecha||!hora||!ubicacion||!descripcion) { alert("Rellena los campos obligatorios: fecha, hora, ubicación y descripción."); return; }
-  incidencies.unshift({
+  const nueva = {
     id: nextId++, fecha, hora,
     gravedad: document.getElementById("n-gravedad").value,
     categoria: document.getElementById("n-categoria").value,
@@ -171,11 +190,14 @@ function guardarIncidencia() {
     imgRuta: document.getElementById("n-img-ruta").value.trim(),
     imgObs: document.getElementById("n-img-obs").value.trim(),
     estat: document.querySelector('input[name="n-estat"]:checked').value,
-  });
+  };
+  nueva.categoria = categoriaEfectiva(nueva);
+  incidencies.unshift(nueva);
   tancarModal("modal-nova");
   actualitzarMetriques();
   omplirFiltresMesos();
   renderTabla();
+  renderMantenimiento();
 }
 
 function exportarCSV() {
@@ -190,8 +212,54 @@ function exportarCSV() {
   URL.revokeObjectURL(url);
 }
 
+// MANTENIMENT
+function filtrarMantenimiento() {
+  var el = function(id){ var e=document.getElementById(id); return e?e.value:""; };
+  var buscar = (el("mt-buscar")||"").toLowerCase();
+  var cat = el("mt-categoria")||""; var est = el("mt-estat")||"";
+  return incidencies.filter(function(d){
+    if (!esCategoriaOperativa(d.categoria)) return false;
+    if (cat && d.categoria !== cat) return false;
+    if (est && d.estat !== est) return false;
+    if (buscar) {
+      var hay = ((d.resum||"")+" "+(d.descripcion||"")+" "+(d.ubicacion||"")+" "+(d.categoria||"")).toLowerCase();
+      if (hay.indexOf(buscar)===-1) return false;
+    }
+    return true;
+  });
+}
+
+function renderMantenimiento() {
+  var tbody = document.getElementById("tbody-mantenimiento");
+  if (!tbody) return;
+  var todos = incidencies.filter(function(d){ return esCategoriaOperativa(d.categoria); });
+  var mesActual = getMesActual();
+  var totalEl = document.getElementById("mt-total"); if (totalEl) totalEl.textContent = todos.length;
+  var abEl = document.getElementById("mt-abiertas"); if (abEl) abEl.textContent = todos.filter(function(d){ return d.estat==="Obert"; }).length;
+  var ceEl = document.getElementById("mt-cerradas"); if (ceEl) ceEl.textContent = todos.filter(function(d){ return d.estat==="Tancat"; }).length;
+  var mesEl = document.getElementById("mt-mes"); if (mesEl) mesEl.textContent = todos.filter(function(d){ return (d.fecha||"").startsWith(mesActual); }).length;
+
+  var lista = filtrarMantenimiento();
+  if (!lista.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><div class="empty-icon">🔧</div>'+
+      (todos.length===0 ? "Aún no hay avisos de mantenimiento registrados." : "Ningún aviso coincide con los filtros seleccionados.")+
+      '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(function(d){
+    return '<tr>'+
+      '<td class="td-muted">'+formatData(d.fecha)+'</td>'+
+      '<td class="td-muted">'+d.hora+'</td>'+
+      '<td><span class="badge badge-cat">'+catEs(d.categoria)+'</span></td>'+
+      '<td class="td-muted" style="font-size:12px">'+d.ubicacion+'</td>'+
+      '<td style="font-size:12px;color:#4A5568;max-width:200px">'+(d.resum||d.descripcion)+'</td>'+
+      '<td><span class="badge '+(d.estat==='Obert'?'badge-obert':'badge-tancat')+'">'+estadoEs(d.estat)+'</span></td>'+
+      '<td><button class="btn btn-outline btn-sm" onclick="verIncidencia(\''+d.id+'\')">Ver</button></td>'+
+      '</tr>';
+  }).join("");
+}
+
 // INFORMES
-var CATEGORIA_EXCLUIDA_INFORME = "Operativa";
 var INF_COLORS = {
   "Robatori": "#ef4444",
   "Danys": "#f59e0b",
@@ -239,6 +307,7 @@ function getRangoInformes() {
 function incidenciesEnRango(desde, hasta) {
   return incidencies.filter(function(d){
     if (!d.fecha) return false;
+    if (esCategoriaOperativa(d.categoria)) return false;
     if (desde && d.fecha < desde) return false;
     if (hasta && d.fecha > hasta) return false;
     return true;
@@ -268,7 +337,6 @@ function nombreMes(m) {
 function datosGraficoTema(lista) {
   var conteo = {};
   lista.forEach(function(d){
-    if (d.categoria === CATEGORIA_EXCLUIDA_INFORME) return;
     conteo[d.categoria] = (conteo[d.categoria]||0)+1;
   });
   return Object.keys(conteo).map(function(cat){
@@ -956,7 +1024,7 @@ renderTabla();
 const VILAMARINA_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwhgSbeZUEA5aSLEA_O80OsLGVeFn-CLaQuX3rP14TNRQgN8ZSsvij-TWGIREvPBwD0/exec";
 
 function mapearFilaSheet(f, i) {
-  return {
+  var obj = {
     id: "sheet-" + (f.fecha || "") + "-" + (f.hora || "") + "-" + i,
     fecha: f.fecha || "",
     hora: f.hora || "",
@@ -972,6 +1040,8 @@ function mapearFilaSheet(f, i) {
     enlace: f.enlace || "",
     origen: "sheets"
   };
+  obj.categoria = categoriaEfectiva(obj);
+  return obj;
 }
 
 function verIncidencia(id) {
