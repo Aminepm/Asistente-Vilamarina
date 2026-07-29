@@ -9,7 +9,7 @@ let afectatDetallActual = null;
 function formatData(f) { return f ? f.split("-").reverse().join("/") : "—"; }
 function getMesActual() { return new Date().toISOString().slice(0,7); }
 function badgeGravClass(g) { return {"Crítica":"badge-critica","Alta":"badge-alta","Media":"badge-media","Baja":"badge-baja"}[g]||""; }
-function badgeGravLabel(g) { return {"Crítica":"Crítica","Alta":"Alta","Media":"Mitja","Baja":"Baixa"}[g]||g; }
+function badgeGravLabel(g) { return {"Crítica":"Crítica","Alta":"Alta","Media":"Media","Baja":"Baja"}[g]||g; }
 function rowClass(g) { return {"Crítica":"row-crithica","Alta":"row-alta","Media":"row-media","Baja":"row-baja"}[g]||""; }
 
 function canviarVista(vista, btn) {
@@ -25,7 +25,7 @@ function canviarVista(vista, btn) {
 function omplirFiltresMesos() {
   const mesos = [...new Set(incidencies.map(i => i.fecha.slice(0,7)))].sort().reverse();
   const sel = document.getElementById("f-mes");
-  sel.innerHTML = '<option value="">Tots els mesos</option>';
+  sel.innerHTML = '<option value="">Todos los meses</option>';
   const noms = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   mesos.forEach(m => {
     const [y, mo] = m.split("-");
@@ -53,7 +53,7 @@ function renderTabla() {
   const filtrats = filtrar();
   const tbody = document.getElementById("tbody");
   if (!filtrats.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📋</div>${incidencies.length === 0 ? "Encara no hi ha incidències registrades.<br><small>Fes clic a <strong>Nova incidència</strong> per afegir-ne una.</small>" : "Cap incidència coincideix amb els filtres seleccionats."}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📋</div>${incidencies.length === 0 ? "Aún no hay incidencias registradas.<br><small>Haz clic en <strong>Nueva incidencia</strong> para añadir una.</small>" : "Ninguna incidencia coincide con los filtros seleccionados."}</td></tr>`;
     return;
   }
   tbody.innerHTML = filtrats.map(d => `
@@ -82,32 +82,32 @@ function obrirDetall(id) {
   const d = incidencies.find(i=>i.id===id);
   if (!d) return;
   incidenciaDetallActual = d;
-  document.getElementById("detall-titol").textContent = `Incidència #${d.id} — ${d.categoria}`;
-  document.getElementById("btn-toggle-estat").textContent = d.estat==="Obert" ? "Marcar com a tancat" : "Reabrir incidencia";
+  document.getElementById("detall-titol").textContent = `Incidencia #${d.id} — ${catEs(d.categoria)}`;
+  document.getElementById("btn-toggle-estat").textContent = d.estat==="Obert" ? "Marcar como cerrado" : "Reabrir incidencia";
   const af = afectats.filter(a=>a.incidenciaId===d.id);
   document.getElementById("detall-body").innerHTML = `
     <div class="detail-section">
-      <div class="detail-section-title">Dades generals</div>
+      <div class="detail-section-title">Datos generales</div>
       <div class="detail-grid">
-        <div class="detail-item"><div class="detail-label">Data i hora</div><div class="detail-value">${formatData(d.fecha)} a les ${d.hora}h</div></div>
-        <div class="detail-item"><div class="detail-label">Vigilant</div><div class="detail-value">${d.vigilant||"—"}</div></div>
-        <div class="detail-item"><div class="detail-label">Gravetat</div><div class="detail-value"><span class="badge ${badgeGravClass(d.gravedad)}">${badgeGravLabel(d.gravedad)}</span></div></div>
-        <div class="detail-item"><div class="detail-label">Categoria</div><div class="detail-value"><span class="badge badge-cat">${d.categoria}</span></div></div>
-        <div class="detail-item"><div class="detail-label">Ubicació</div><div class="detail-value">${d.ubicacion}</div></div>
-        <div class="detail-item"><div class="detail-label">Estat</div><div class="detail-value"><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></div></div>
+        <div class="detail-item"><div class="detail-label">Fecha y hora</div><div class="detail-value">${formatData(d.fecha)} a las ${d.hora}h</div></div>
+        <div class="detail-item"><div class="detail-label">Vigilante</div><div class="detail-value">${d.vigilant||"—"}</div></div>
+        <div class="detail-item"><div class="detail-label">Gravedad</div><div class="detail-value"><span class="badge ${badgeGravClass(d.gravedad)}">${badgeGravLabel(d.gravedad)}</span></div></div>
+        <div class="detail-item"><div class="detail-label">Categoría</div><div class="detail-value"><span class="badge badge-cat">${d.categoria}</span></div></div>
+        <div class="detail-item"><div class="detail-label">Ubicación</div><div class="detail-value">${d.ubicacion}</div></div>
+        <div class="detail-item"><div class="detail-label">Estado</div><div class="detail-value"><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></div></div>
       </div>
     </div>
     <div class="detail-section">
-      <div class="detail-section-title">Descripció i resum</div>
+      <div class="detail-section-title">Descripción y resumen</div>
       <div class="detail-grid">
-        <div class="detail-item detail-full"><div class="detail-label">Resum</div><div class="detail-value">${d.resum||"—"}</div></div>
-        <div class="detail-item detail-full"><div class="detail-label">Descripció completa</div><div class="detail-value" style="font-size:13px;color:#4A5568">${d.descripcion}</div></div>
-        <div class="detail-item detail-full"><div class="detail-label">Mesures adoptades</div><div class="detail-value">${d.accion||"—"}</div></div>
+        <div class="detail-item detail-full"><div class="detail-label">Resumen</div><div class="detail-value">${d.resum||"—"}</div></div>
+        <div class="detail-item detail-full"><div class="detail-label">Descripción completa</div><div class="detail-value" style="font-size:13px;color:#4A5568">${d.descripcion}</div></div>
+        <div class="detail-item detail-full"><div class="detail-label">Medidas adoptadas</div><div class="detail-value">${d.accion||"—"}</div></div>
       </div>
     </div>
-    ${d.imgCarpeta||d.imgRuta?`<div class="detail-section"><div class="detail-section-title">Imatges / Vídeos de seguretat</div><div class="img-ref-box"><strong>Referència d'imatges</strong>${d.imgCarpeta?`<div>📁 Carpeta: <strong>${d.imgCarpeta}</strong></div>`:""} ${d.imgRuta?`<div>📍 Ruta: <code style="font-size:11px">${d.imgRuta}</code></div>`:""} ${d.imgObs?`<div style="margin-top:4px">${d.imgObs}</div>`:""}</div></div>`:""}
-    ${d.correo?`<div class="detail-section"><div class="detail-section-title">Correu original</div><div class="correo-box">${d.correo}</div></div>`:""}
-    ${af.length?`<div class="detail-section"><div class="detail-section-title">Afectats vinculats (${af.length})</div>${af.map(a=>`<div style="font-size:13px;padding:8px 0;border-bottom:1px solid #F0F2F5">${a.nom} — ${a.tel}${a.medica==='Sí'?' · <span style="color:#922B21">Asistencia médica</span>':""}</div>`).join("")}</div>`:""}
+    ${d.imgCarpeta||d.imgRuta?`<div class="detail-section"><div class="detail-section-title">Imágenes / Vídeos de seguridad</div><div class="img-ref-box"><strong>Referencia de imágenes</strong>${d.imgCarpeta?`<div>📁 Carpeta: <strong>${d.imgCarpeta}</strong></div>`:""} ${d.imgRuta?`<div>📍 Ruta: <code style="font-size:11px">${d.imgRuta}</code></div>`:""} ${d.imgObs?`<div style="margin-top:4px">${d.imgObs}</div>`:""}</div></div>`:""}
+    ${d.correo?`<div class="detail-section"><div class="detail-section-title">Correo original</div><div class="correo-box">${d.correo}</div></div>`:""}
+    ${af.length?`<div class="detail-section"><div class="detail-section-title">Afectados vinculados (${af.length})</div>${af.map(a=>`<div style="font-size:13px;padding:8px 0;border-bottom:1px solid #F0F2F5">${a.nom} — ${a.tel}${a.medica==='Sí'?' · <span style="color:#922B21">Asistencia médica</span>':""}</div>`).join("")}</div>`:""}
   `;
   document.getElementById("modal-detall").classList.add("open");
 }
@@ -126,7 +126,7 @@ function descarregarCorreo() {
   const d = incidenciaDetallActual;
   const blob = new Blob([d.correo], {type:"text/plain;charset=utf-8"});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href=url; a.download=`correu_inc${d.id}_${d.fecha}.txt`; a.click();
+  const a = document.createElement("a"); a.href=url; a.download=`correo_inc${d.id}_${d.fecha}.txt`; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -181,12 +181,12 @@ function guardarIncidencia() {
 function exportarCSV() {
   const filtrats = filtrar();
   if (!filtrats.length) { alert("No hay incidencias para exportar."); return; }
-  const cap = ["ID","Data","Hora","Gravetat","Categoria","Ubicació","Resum","Descripció","Mesures","Vigilant","Estat","Carpeta Imatges","Ruta Imatges"];
-  const files = filtrats.map(d=>[d.id,formatData(d.fecha),d.hora,d.gravedad,d.categoria,d.ubicacion,d.resum,d.descripcion,d.accion,d.vigilant,d.estat,d.imgCarpeta,d.imgRuta]);
+  const cap = ["ID","Fecha","Hora","Gravedad","Categoría","Ubicación","Resumen","Descripción","Medidas","Vigilante","Estado","Carpeta Imágenes","Ruta Imágenes"];
+  const files = filtrats.map(d=>[d.id,formatData(d.fecha),d.hora,d.gravedad,catEs(d.categoria),d.ubicacion,d.resum,d.descripcion,d.accion,d.vigilant,estadoEs(d.estat),d.imgCarpeta,d.imgRuta]);
   const csv = [cap,...files].map(r=>r.map(c=>`"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
   const blob = new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href=url; a.download=`incidencies_vilamarina_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  const a = document.createElement("a"); a.href=url; a.download=`incidencias_vilamarina_${new Date().toISOString().slice(0,10)}.csv`; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -209,6 +209,13 @@ var INF_CATEGORIA_ES = {
   "Incidència Baixa": "Incidencia leve"
 };
 function catEs(cat) { return INF_CATEGORIA_ES[cat] || cat; }
+var ESTADO_ES = { "Obert": "Abierto", "Tancat": "Cerrado" };
+function estadoEs(e) { return ESTADO_ES[e] || e; }
+var INF_MESES_CORTOS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+function nombreMesCorto(m) {
+  var partes = m.split("-");
+  return INF_MESES_CORTOS[parseInt(partes[1],10)-1] + " " + partes[0].slice(2);
+}
 
 var INF_FECHAS_INICIALIZADAS = false;
 function inicializarFechasInformes() {
@@ -292,10 +299,116 @@ function construirGraficoCircular(datos) {
     var pct = Math.round(d.value/total*100);
     return '<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#2C3E50">' +
       '<span style="width:10px;height:10px;border-radius:50%;background:'+d.color+';display:inline-block;flex-shrink:0"></span>' +
-      '<span>'+d.label+'</span>' +
+      '<span>'+catEs(d.label)+'</span>' +
       '<span style="margin-left:auto;color:#7A8FA6;font-size:12px">'+d.value+' · '+pct+'%</span></div>';
   }).join('') + '</div>';
   return svg + leyenda;
+}
+
+function construirGraficoLineal(filasMes) {
+  if (!filasMes.length) return '<div style="color:#7A8FA6;font-size:13px;padding:12px">No hay incidencias en el rango seleccionado.</div>';
+  var width = 760, height = 220, padding = { left: 34, right: 16, top: 16, bottom: 30 };
+  var plotW = width - padding.left - padding.right, plotH = height - padding.top - padding.bottom;
+  var maxV = Math.max.apply(null, filasMes.map(function(f){ return f.total; }).concat([1]));
+  var stepX = filasMes.length > 1 ? plotW/(filasMes.length-1) : 0;
+  function xAt(i) { return padding.left + (filasMes.length>1 ? stepX*i : plotW/2); }
+  function yAt(v) { return padding.top + plotH - (maxV>0 ? (v/maxV)*plotH : 0); }
+  var svg = '<svg viewBox="0 0 '+width+' '+height+'" style="width:100%;height:auto;max-width:100%">';
+  var pasos = 4;
+  for (var i=0; i<=pasos; i++) {
+    var y = padding.top + plotH - (plotH*i/pasos);
+    var val = Math.round(maxV*i/pasos);
+    svg += '<line x1="'+padding.left+'" y1="'+y+'" x2="'+(width-padding.right)+'" y2="'+y+'" stroke="#E2E6EA" stroke-width="1"/>';
+    svg += '<text x="'+(padding.left-8)+'" y="'+(y+3)+'" font-size="10" fill="#7A8FA6" text-anchor="end">'+val+'</text>';
+  }
+  var puntos = filasMes.map(function(f,i){ return xAt(i)+","+yAt(f.total); });
+  var areaPath = 'M'+puntos.join(' L')+' L'+xAt(filasMes.length-1)+','+(padding.top+plotH)+' L'+xAt(0)+','+(padding.top+plotH)+' Z';
+  svg += '<path d="'+areaPath+'" fill="#F59E0B" fill-opacity="0.12"></path>';
+  svg += '<polyline points="'+puntos.join(' ')+'" fill="none" stroke="#F59E0B" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"></polyline>';
+  var etiquetaCada = Math.ceil(filasMes.length/10) || 1;
+  filasMes.forEach(function(f,i){
+    var x = xAt(i), y = yAt(f.total);
+    svg += '<circle cx="'+x+'" cy="'+y+'" r="3" fill="#0F1B2D"></circle>';
+    if (i % etiquetaCada === 0 || i === filasMes.length-1) {
+      svg += '<text x="'+x+'" y="'+(height-10)+'" font-size="10" fill="#5A6B7B" text-anchor="middle">'+nombreMesCorto(f.mes)+'</text>';
+    }
+  });
+  svg += '</svg>';
+  return svg;
+}
+
+function generarImagenGraficoCircularCanvas(datos, cssW, cssH) {
+  var dpr = 3;
+  var canvas = document.createElement("canvas");
+  canvas.width = cssW*dpr; canvas.height = cssH*dpr;
+  var ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  var total = datos.reduce(function(s,d){ return s+d.value; }, 0);
+  var cx = cssW/2, cy = cssH/2, radius = Math.min(cssW,cssH)/2 - 4, sw = radius*0.42;
+  if (total) {
+    var start = -Math.PI/2;
+    datos.forEach(function(d){
+      if (!d.value) return;
+      var ang = (d.value/total)*Math.PI*2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, start, start+ang);
+      ctx.lineWidth = sw;
+      ctx.strokeStyle = d.color;
+      ctx.stroke();
+      start += ang;
+    });
+  }
+  ctx.fillStyle = "#0F1B2D";
+  ctx.font = "bold " + Math.round(cssH*0.16) + "px Helvetica, Arial, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(String(total), cx, cy);
+  return canvas;
+}
+
+function generarImagenGraficoLinealCanvas(filasMes, cssW, cssH) {
+  var dpr = 3;
+  var canvas = document.createElement("canvas");
+  canvas.width = cssW*dpr; canvas.height = cssH*dpr;
+  var ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  var padding = { left: 30, right: 8, top: 10, bottom: 20 };
+  var plotW = cssW-padding.left-padding.right, plotH = cssH-padding.top-padding.bottom;
+  var maxV = Math.max.apply(null, filasMes.map(function(f){ return f.total; }).concat([1]));
+  ctx.strokeStyle = "#E2E6EA"; ctx.lineWidth = 1;
+  ctx.font = "9px Helvetica, Arial, sans-serif"; ctx.fillStyle = "#7A8FA6";
+  var pasos = 4;
+  for (var i=0; i<=pasos; i++) {
+    var y = padding.top + plotH - (plotH*i/pasos);
+    ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(cssW-padding.right, y); ctx.stroke();
+    ctx.textAlign = "right";
+    ctx.fillText(String(Math.round(maxV*i/pasos)), padding.left-5, y+3);
+  }
+  if (!filasMes.length) return canvas;
+  var stepX = filasMes.length > 1 ? plotW/(filasMes.length-1) : 0;
+  function xAt(i) { return padding.left + (filasMes.length>1 ? stepX*i : plotW/2); }
+  function yAt(v) { return padding.top + plotH - (maxV>0 ? (v/maxV)*plotH : 0); }
+  ctx.beginPath();
+  filasMes.forEach(function(f,i){ var x=xAt(i), y2=yAt(f.total); if (i===0) ctx.moveTo(x,y2); else ctx.lineTo(x,y2); });
+  ctx.lineTo(xAt(filasMes.length-1), padding.top+plotH);
+  ctx.lineTo(xAt(0), padding.top+plotH);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(245,158,11,0.14)";
+  ctx.fill();
+  ctx.beginPath();
+  filasMes.forEach(function(f,i){ var x=xAt(i), y2=yAt(f.total); if (i===0) ctx.moveTo(x,y2); else ctx.lineTo(x,y2); });
+  ctx.strokeStyle = "#F59E0B"; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
+  ctx.fillStyle = "#0F1B2D";
+  filasMes.forEach(function(f,i){
+    var x = xAt(i), y2 = yAt(f.total);
+    ctx.beginPath(); ctx.arc(x, y2, 2.2, 0, Math.PI*2); ctx.fill();
+  });
+  var etiquetaCada = Math.ceil(filasMes.length/7) || 1;
+  ctx.fillStyle = "#5A6B7B"; ctx.textAlign = "center"; ctx.font = "8px Helvetica, Arial, sans-serif";
+  filasMes.forEach(function(f,i){
+    if (i % etiquetaCada !== 0 && i !== filasMes.length-1) return;
+    ctx.fillText(nombreMesCorto(f.mes), xAt(i), cssH-6);
+  });
+  return canvas;
 }
 
 function resumenMensualCompleto(lista) {
@@ -325,7 +438,10 @@ function renderInformes() {
   var lista = incidenciesEnRango(rango.desde, rango.hasta);
   var grafico = document.getElementById("inf-grafico");
   if (grafico) grafico.innerHTML = construirGraficoCircular(datosGraficoTema(lista));
-  var filas = resumenMensualCompleto(lista).slice().reverse();
+  var filasAsc = resumenMensualCompleto(lista);
+  var graficoLineal = document.getElementById("inf-grafico-lineal");
+  if (graficoLineal) graficoLineal.innerHTML = construirGraficoLineal(filasAsc);
+  var filas = filasAsc.slice().reverse();
   var tbody = document.getElementById("inf-tbody-mensual");
   if (tbody) {
     tbody.innerHTML = filas.length ? filas.map(function(f){
@@ -334,44 +450,11 @@ function renderInformes() {
   }
 }
 
-function exportarInformeMensualCSV(lista, sufijo) {
-  if (!lista.length) { alert("No hay incidencias en el rango seleccionado."); return; }
-  var filas = resumenMensualCompleto(lista);
-  var cap = ["Mes","Total","Críticas","Altas","Medias","Bajas",catEs("Robatori"),catEs("Danys"),catEs("Accident Parking"),catEs("Accident CC"),catEs("Incidència Baixa"),"Abiertas","Cerradas"];
-  var datos = filas.map(function(f){
-    return [nombreMes(f.mes), f.total, f.criticas, f.altas, f.medias, f.bajas,
-      f.categorias["Robatori"], f.categorias["Danys"], f.categorias["Accident Parking"], f.categorias["Accident CC"], f.categorias["Incidència Baixa"],
-      f.abiertas, f.cerradas];
-  });
-  var totalRow = ["TOTAL", lista.length,
-    filas.reduce(function(s,f){return s+f.criticas;},0), filas.reduce(function(s,f){return s+f.altas;},0),
-    filas.reduce(function(s,f){return s+f.medias;},0), filas.reduce(function(s,f){return s+f.bajas;},0),
-    filas.reduce(function(s,f){return s+f.categorias["Robatori"];},0), filas.reduce(function(s,f){return s+f.categorias["Danys"];},0),
-    filas.reduce(function(s,f){return s+f.categorias["Accident Parking"];},0), filas.reduce(function(s,f){return s+f.categorias["Accident CC"];},0),
-    filas.reduce(function(s,f){return s+f.categorias["Incidència Baixa"];},0),
-    filas.reduce(function(s,f){return s+f.abiertas;},0), filas.reduce(function(s,f){return s+f.cerradas;},0)];
-  var csv = [cap].concat(datos).concat([totalRow]).map(function(r){
-    return r.map(function(c){ return '"'+String(c==null?"":c).replace(/"/g,'""')+'"'; }).join(",");
-  }).join("\n");
-  var blob = new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8"});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a"); a.href=url; a.download="informe_mensual_"+sufijo+"_vilamarina.csv"; a.click();
-  URL.revokeObjectURL(url);
-}
-
-function descargarInformeMensual() {
-  inicializarFechasInformes();
-  var rango = getRangoInformes();
-  var lista = incidenciesEnRango(rango.desde, rango.hasta);
-  var sufijo = (rango.desde||"inicio") + "_a_" + (rango.hasta||"actual");
-  exportarInformeMensualCSV(lista, sufijo);
-}
-
-function descargarInformeYTD() {
-  establecerRangoYTD();
-  var rango = getRangoInformes();
-  var lista = incidenciesEnRango(rango.desde, rango.hasta);
-  exportarInformeMensualCSV(lista, "YTD_" + rango.hasta.slice(0,4));
+function establecerRangoMTD() {
+  var hoy = new Date().toISOString().slice(0,10);
+  document.getElementById("inf-desde").value = hoy.slice(0,7) + "-01";
+  document.getElementById("inf-hasta").value = hoy;
+  renderInformes();
 }
 
 function tituloRangoInforme(rango) {
@@ -424,6 +507,16 @@ function generarPDFInforme(lista, rango, sufijo) {
   var y = doc.lastAutoTable.finalY + 10;
   doc.setTextColor(15,27,45); doc.setFont("helvetica","bold"); doc.setFontSize(12);
   doc.text("Incidencias por tema", margenIzq, y);
+  doc.text("Evolución mensual de incidencias", margenIzq + 70, y);
+  var pieW = 62, pieH = 62, lineW = 110, lineH = 57;
+  var pieCanvas = generarImagenGraficoCircularCanvas(temas, 240, 240);
+  doc.addImage(pieCanvas.toDataURL("image/png"), "PNG", margenIzq, y + 4, pieW, pieH);
+  var lineCanvas = generarImagenGraficoLinealCanvas(filasMes, 460, 240);
+  doc.addImage(lineCanvas.toDataURL("image/png"), "PNG", margenIzq + 70, y + 4, lineW, lineH);
+  y = y + 4 + Math.max(pieH, lineH) + 8;
+
+  doc.setTextColor(15,27,45); doc.setFont("helvetica","bold"); doc.setFontSize(12);
+  doc.text("Detalle por categoría", margenIzq, y);
   doc.autoTable({
     startY: y + 4,
     margin: { top: 38, left: margenIzq, right: margenIzq },
@@ -489,11 +582,18 @@ function descargarInformeYTDPDF() {
   generarPDFInforme(lista, rango, "YTD_" + rango.hasta.slice(0,4));
 }
 
+function descargarInformeMTDPDF() {
+  establecerRangoMTD();
+  var rango = getRangoInformes();
+  var lista = incidenciesEnRango(rango.desde, rango.hasta);
+  generarPDFInforme(lista, rango, "MTD_" + rango.hasta.slice(0,7));
+}
+
 // AFECTATS
 function renderAfectats() {
   const tbody = document.getElementById("tbody-afectats");
   if (!afectats.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><div class="empty-icon">👤</div>Encara no hi ha afectats registrats.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><div class="empty-icon">👤</div>Aún no hay afectados registrados.</td></tr>';
     return;
   }
   tbody.innerHTML = afectats.map(a => {
@@ -502,7 +602,7 @@ function renderAfectats() {
       <td>${a.nom}</td>
       <td class="td-muted">${a.dni}</td>
       <td class="td-muted">${a.tel}</td>
-      <td class="td-muted" style="font-size:12px">${inc?`#${inc.id} ${inc.categoria} (${formatData(inc.fecha)})`:"—"}</td>
+      <td class="td-muted" style="font-size:12px">${inc?`#${inc.id} ${catEs(inc.categoria)} (${formatData(inc.fecha)})`:"—"}</td>
       <td><span class="badge ${a.medica==='Sí'?'badge-critica':'badge-baja'}">${a.medica}</span></td>
       <td><span class="badge ${a.consentiment==='Sí'?'badge-baja':'badge-alta'}">${a.consentiment}</span></td>
       <td><button class="btn btn-outline btn-sm" onclick="obrirDetallAfectat(${a.id})">Ver incidencia</button></td>
@@ -518,7 +618,7 @@ function obrirModalAfectat() {
   document.getElementById("a-testimonis").value="No";
   document.getElementById("bloc-testimoni").style.display="none";
   const sel = document.getElementById("a-incidencia");
-  sel.innerHTML = '<option value="">Sense vincular</option>'+incidencies.map(i=>`<option value="${i.id}">#${i.id} — ${i.categoria} (${formatData(i.fecha)})</option>`).join("");
+  sel.innerHTML = '<option value="">Sin vincular</option>'+incidencies.map(i=>`<option value="${i.id}">#${i.id} — ${catEs(i.categoria)} (${formatData(i.fecha)})</option>`).join("");
   document.getElementById("modal-afectat").classList.add("open");
 }
 
@@ -560,31 +660,31 @@ function obrirDetallAfectat(id) {
   const inc = incidencies.find(i=>i.id===a.incidenciaId);
   document.getElementById("da-titol").textContent = a.nom;
   document.getElementById("da-body").innerHTML = `
-    <div class="detail-section"><div class="detail-section-title">Dades personals</div>
+    <div class="detail-section"><div class="detail-section-title">Datos personales</div>
     <div class="detail-grid">
-      <div class="detail-item"><div class="detail-label">Nom complet</div><div class="detail-value">${a.nom}</div></div>
-      <div class="detail-item"><div class="detail-label">DNI/NIE/Passaport</div><div class="detail-value">${a.dni}</div></div>
-      <div class="detail-item"><div class="detail-label">Data de naixement</div><div class="detail-value">${formatData(a.naix)}</div></div>
-      <div class="detail-item"><div class="detail-label">Telèfon</div><div class="detail-value">${a.tel}</div></div>
-      <div class="detail-item"><div class="detail-label">Correu</div><div class="detail-value">${a.email||"—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Adreça</div><div class="detail-value">${a.adreca||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Nombre completo</div><div class="detail-value">${a.nom}</div></div>
+      <div class="detail-item"><div class="detail-label">DNI/NIE/Pasaporte</div><div class="detail-value">${a.dni}</div></div>
+      <div class="detail-item"><div class="detail-label">Fecha de nacimiento</div><div class="detail-value">${formatData(a.naix)}</div></div>
+      <div class="detail-item"><div class="detail-label">Teléfono</div><div class="detail-value">${a.tel}</div></div>
+      <div class="detail-item"><div class="detail-label">Correo</div><div class="detail-value">${a.email||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Dirección</div><div class="detail-value">${a.adreca||"—"}</div></div>
     </div></div>
-    <div class="detail-section"><div class="detail-section-title">Incidència i assistència mèdica</div>
+    <div class="detail-section"><div class="detail-section-title">Incidencia y asistencia médica</div>
     <div class="detail-grid">
-      <div class="detail-item detail-full"><div class="detail-label">Incidència vinculada</div><div class="detail-value">${inc?`#${inc.id} — ${inc.categoria} (${formatData(inc.fecha)}) · ${inc.ubicacion}`:"—"}</div></div>
+      <div class="detail-item detail-full"><div class="detail-label">Incidencia vinculada</div><div class="detail-value">${inc?`#${inc.id} — ${catEs(inc.categoria)} (${formatData(inc.fecha)}) · ${inc.ubicacion}`:"—"}</div></div>
       <div class="detail-item"><div class="detail-label">Asistencia médica</div><div class="detail-value">${a.medica}</div></div>
-      <div class="detail-item"><div class="detail-label">Centre mèdic</div><div class="detail-value">${a.hospital||"—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Nº part mèdic</div><div class="detail-value">${a.partMedic||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Centro médico</div><div class="detail-value">${a.hospital||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Nº parte médico</div><div class="detail-value">${a.partMedic||"—"}</div></div>
       <div class="detail-item"><div class="detail-label">Número de matrícula</div><div class="detail-value">${a.matricula||"—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Nº identificatiu ambulància</div><div class="detail-value">${a.numAmbulancia||"—"}</div></div>
-      <div class="detail-item detail-full"><div class="detail-label">Tècnic responsable / metge</div><div class="detail-value">${a.tecnico||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Nº identificativo ambulancia</div><div class="detail-value">${a.numAmbulancia||"—"}</div></div>
+      <div class="detail-item detail-full"><div class="detail-label">Técnico responsable / médico</div><div class="detail-value">${a.tecnico||"—"}</div></div>
     </div></div>
-    <div class="detail-section"><div class="detail-section-title">Declaració i testimonis</div>
+    <div class="detail-section"><div class="detail-section-title">Declaración y testigos</div>
     <div class="detail-grid">
-      <div class="detail-item detail-full"><div class="detail-label">Declaració de l'afectat</div><div class="detail-value" style="font-size:13px;color:#4A5568">${a.declaracio||"—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Consentiment</div><div class="detail-value"><span class="badge ${a.consentiment==='Sí'?'badge-baja':'badge-alta'}">${a.consentiment}</span></div></div>
-      <div class="detail-item"><div class="detail-label">Testimonis</div><div class="detail-value">${a.testimonis}</div></div>
-      ${a.testimonis==="Sí"?`<div class="detail-item"><div class="detail-label">Nom testimoni</div><div class="detail-value">${a.testNom||"—"}</div></div><div class="detail-item"><div class="detail-label">Tel. testimoni</div><div class="detail-value">${a.testTel||"—"}</div></div>`:""}
+      <div class="detail-item detail-full"><div class="detail-label">Declaración del afectado</div><div class="detail-value" style="font-size:13px;color:#4A5568">${a.declaracio||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Consentimiento</div><div class="detail-value"><span class="badge ${a.consentiment==='Sí'?'badge-baja':'badge-alta'}">${a.consentiment}</span></div></div>
+      <div class="detail-item"><div class="detail-label">Testigos</div><div class="detail-value">${a.testimonis}</div></div>
+      ${a.testimonis==="Sí"?`<div class="detail-item"><div class="detail-label">Nombre del testigo</div><div class="detail-value">${a.testNom||"—"}</div></div><div class="detail-item"><div class="detail-label">Tel. testigo</div><div class="detail-value">${a.testTel||"—"}</div></div>`:""}
     </div></div>`;
   document.getElementById("modal-detall-afectat").classList.add("open");
 }
@@ -780,22 +880,22 @@ function renderBackup() {
   const mesos = [...new Set(incidencies.map(i=>i.fecha.slice(0,7)))].sort().reverse();
   const noms = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   const container = document.getElementById("backup-months");
-  if (!mesos.length) { container.innerHTML='<div style="color:#7A8FA6;font-size:13px;padding:12px">Encara no hi ha incidències registrades.</div>'; return; }
+  if (!mesos.length) { container.innerHTML='<div style="color:#7A8FA6;font-size:13px;padding:12px">Aún no hay incidencias registradas.</div>'; return; }
   container.innerHTML = mesos.map(m=>{
     const [y,mo]=m.split("-");
     const count=incidencies.filter(i=>i.fecha.startsWith(m)).length;
-    return `<div class="month-card"><div class="month-card-info"><strong>${noms[parseInt(mo)-1]} ${y}</strong><span>${count} incidència${count!==1?"es":""}</span></div><button class="btn btn-primary btn-sm" onclick="exportarBackupMes('${m}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Baixar</button></div>`;
+    return `<div class="month-card"><div class="month-card-info"><strong>${noms[parseInt(mo)-1]} ${y}</strong><span>${count} incidencia${count!==1?"s":""}</span></div><button class="btn btn-primary btn-sm" onclick="exportarBackupMes('${m}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Descargar</button></div>`;
   }).join("");
 }
 
 function generarContingutBackup(llista) {
-  let txt = `BACKUP INCIDÈNCIES — VILAMARINA\nBarna Porters S.L. · Oficina de Gerència\nGenerat: ${new Date().toLocaleString("ca-ES")}\n${"=".repeat(60)}\n\n`;
+  let txt = `BACKUP INCIDENCIAS — VILAMARINA\nBarna Porters S.L. · Oficina de Gerencia\nGenerado: ${new Date().toLocaleString("es-ES")}\n${"=".repeat(60)}\n\n`;
   llista.forEach(d=>{
     const af=afectats.filter(a=>a.incidenciaId===d.id);
-    txt+=`INCIDÈNCIA #${d.id}\n${"-".repeat(40)}\nData: ${formatData(d.fecha)} ${d.hora}h\nGravetat: ${d.gravedad}\nCategoria: ${d.categoria}\nUbicació: ${d.ubicacion}\nEstat: ${d.estat}\nVigilant: ${d.vigilant||"—"}\n\nResum: ${d.resum||"—"}\nDescripció: ${d.descripcion}\nMesures adoptades: ${d.accion||"—"}\n`;
-    if(d.imgCarpeta||d.imgRuta) txt+=`\nIMATGES/VÍDEOS:\n  Carpeta: ${d.imgCarpeta||"—"}\n  Ruta: ${d.imgRuta||"—"}\n  Obs: ${d.imgObs||"—"}\n`;
-    if(d.correo) txt+=`\nCORREU ORIGINAL:\n${d.correo}\n`;
-    if(af.length){txt+=`\nAFECTATS (${af.length}):\n`;af.forEach(a=>{txt+=`  - ${a.nom} | DNI: ${a.dni} | Tel: ${a.tel} | Mèdica: ${a.medica} | Consentiment: ${a.consentiment}\n`;});}
+    txt+=`INCIDENCIA #${d.id}\n${"-".repeat(40)}\nFecha: ${formatData(d.fecha)} ${d.hora}h\nGravedad: ${d.gravedad}\nCategoría: ${catEs(d.categoria)}\nUbicación: ${d.ubicacion}\nEstado: ${estadoEs(d.estat)}\nVigilante: ${d.vigilant||"—"}\n\nResumen: ${d.resum||"—"}\nDescripción: ${d.descripcion}\nMedidas adoptadas: ${d.accion||"—"}\n`;
+    if(d.imgCarpeta||d.imgRuta) txt+=`\nIMÁGENES/VÍDEOS:\n  Carpeta: ${d.imgCarpeta||"—"}\n  Ruta: ${d.imgRuta||"—"}\n  Obs: ${d.imgObs||"—"}\n`;
+    if(d.correo) txt+=`\nCORREO ORIGINAL:\n${d.correo}\n`;
+    if(af.length){txt+=`\nAFECTADOS (${af.length}):\n`;af.forEach(a=>{txt+=`  - ${a.nom} | DNI: ${a.dni} | Tel: ${a.tel} | Médica: ${a.medica} | Consentimiento: ${a.consentiment}\n`;});}
     txt+=`\n${"=".repeat(60)}\n\n`;
   });
   return txt;
@@ -803,7 +903,7 @@ function generarContingutBackup(llista) {
 
 function exportarBackupMes(mes) {
   const [y,mo]=mes.split("-");
-  const noms=["gener","febrer","marc","abril","maig","juny","juliol","agost","setembre","octubre","novembre","desembre"];
+  const noms=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const llista=incidencies.filter(i=>i.fecha.startsWith(mes));
   const txt=generarContingutBackup(llista);
   const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
@@ -817,7 +917,7 @@ function exportarBackupComplet() {
   const txt=generarContingutBackup(incidencies);
   const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement("a"); a.href=url; a.download=`backup_complet_vilamarina_${new Date().toISOString().slice(0,10)}.txt`; a.click();
+  const a=document.createElement("a"); a.href=url; a.download=`backup_completo_vilamarina_${new Date().toISOString().slice(0,10)}.txt`; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -886,10 +986,10 @@ function mapearFilaSheet(f, i) {
 }
 
 function verIncidencia(id) {
-  var d = incidencies.find(function(i){ return i.id===id; });
+  var d = incidencies.find(function(i){ return String(i.id)===String(id); });
   if (!d) return;
   if (d.enlace) { window.open(d.enlace, "_blank"); }
-  else { obrirDetall(id); }
+  else { obrirDetall(d.id); }
 }
 
 async function cargarDesdeSheets() {
