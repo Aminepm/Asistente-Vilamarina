@@ -178,15 +178,19 @@
 </div>
 <div class="backup-panel">
 <h3>Descargar informes</h3>
-<p>El informe mensual desglosa, mes a mes, el número de incidencias, su gravedad y su tema dentro del rango de fechas seleccionado.</p>
+<p>El informe en PDF desglosa, mes a mes, el número de incidencias, su gravedad y su tema dentro del rango de fechas seleccionado, listo para imprimir o enviar.</p>
 <div class="header-actions">
-<button class="btn btn-primary" onclick="descargarInformeMensual()">
+<button class="btn btn-primary" onclick="descargarInformeMensualPDF()">
 <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
-          Descargar informe mensual (rango actual)
+          Descargar informe PDF (rango actual)
         </button>
-<button class="btn btn-accent" onclick="descargarInformeYTD()">
+<button class="btn btn-accent" onclick="descargarInformeYTDPDF()">
 <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
-          Descargar informe año en curso (YTD)
+          Descargar informe PDF año en curso (YTD)
+        </button>
+<button class="btn btn-outline" onclick="descargarInformeMensual()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+          Exportar datos en CSV (rango actual)
         </button>
 </div>
 </div>
@@ -390,6 +394,8 @@
 </div>
 </div>
 
+<script src="js/vendor/jspdf.umd.min.js"></script>
+<script src="js/vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="js/kpis.js?v=1"></script>
-<script src="js/app.js?v=11"></script></body>
+<script src="js/app.js?v=12"></script></body>
 </html>

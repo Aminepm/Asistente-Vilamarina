@@ -201,11 +201,22 @@ var INF_COLORS = {
 };
 var INF_CATEGORIAS = ["Robatori","Danys","Accident Parking","Accident CC","Incidència Baixa"];
 var INF_MESOS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+var INF_CATEGORIA_ES = {
+  "Robatori": "Robo",
+  "Danys": "Daños",
+  "Accident Parking": "Accidente Parking",
+  "Accident CC": "Accidente CC",
+  "Incidència Baixa": "Incidencia leve"
+};
+function catEs(cat) { return INF_CATEGORIA_ES[cat] || cat; }
 
+var INF_FECHAS_INICIALIZADAS = false;
 function inicializarFechasInformes() {
+  if (INF_FECHAS_INICIALIZADAS) return;
   var inputDesde = document.getElementById("inf-desde");
   var inputHasta = document.getElementById("inf-hasta");
   if (!inputDesde || !inputHasta) return;
+  INF_FECHAS_INICIALIZADAS = true;
   if (!inputDesde.value && !inputHasta.value) {
     var hoy = new Date().toISOString().slice(0,10);
     inputDesde.value = hoy.slice(0,4) + "-01-01";
@@ -326,7 +337,7 @@ function renderInformes() {
 function exportarInformeMensualCSV(lista, sufijo) {
   if (!lista.length) { alert("No hay incidencias en el rango seleccionado."); return; }
   var filas = resumenMensualCompleto(lista);
-  var cap = ["Mes","Total","Críticas","Altas","Medias","Bajas","Robo","Daños","Accident Parking","Accident CC","Incidencia leve","Abiertas","Cerradas"];
+  var cap = ["Mes","Total","Críticas","Altas","Medias","Bajas",catEs("Robatori"),catEs("Danys"),catEs("Accident Parking"),catEs("Accident CC"),catEs("Incidència Baixa"),"Abiertas","Cerradas"];
   var datos = filas.map(function(f){
     return [nombreMes(f.mes), f.total, f.criticas, f.altas, f.medias, f.bajas,
       f.categorias["Robatori"], f.categorias["Danys"], f.categorias["Accident Parking"], f.categorias["Accident CC"], f.categorias["Incidència Baixa"],
@@ -361,6 +372,121 @@ function descargarInformeYTD() {
   var rango = getRangoInformes();
   var lista = incidenciesEnRango(rango.desde, rango.hasta);
   exportarInformeMensualCSV(lista, "YTD_" + rango.hasta.slice(0,4));
+}
+
+function tituloRangoInforme(rango) {
+  if (!rango.desde && !rango.hasta) return "Todo el histórico";
+  return (rango.desde?formatData(rango.desde):"inicio") + "  —  " + (rango.hasta?formatData(rango.hasta):"actualidad");
+}
+
+function generarPDFInforme(lista, rango, sufijo) {
+  if (!window.jspdf || !window.jspdf.jsPDF) { alert("No se ha podido cargar el generador de PDF."); return; }
+  if (!lista.length) { alert("No hay incidencias en el rango seleccionado."); return; }
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ unit: "mm", format: "a4" });
+  var margenIzq = 14, anchoUtil = 182;
+  var temas = datosGraficoTema(lista);
+  var totalTemas = temas.reduce(function(s,d){ return s+d.value; }, 0);
+  var filasMes = resumenMensualCompleto(lista);
+  var criticas = lista.filter(function(d){ return d.gravedad==="Crítica"; }).length;
+  var altas = lista.filter(function(d){ return d.gravedad==="Alta"; }).length;
+  var abiertas = lista.filter(function(d){ return d.estat==="Obert"; }).length;
+  var cerradas = lista.length - abiertas;
+
+  function encabezado() {
+    doc.setFillColor(15,27,45);
+    doc.rect(0, 0, 210, 24, "F");
+    doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","bold"); doc.setFontSize(15);
+    doc.text("Informe de Incidencias de Seguridad", margenIzq, 12);
+    doc.setFont("helvetica","normal"); doc.setFontSize(9);
+    doc.setTextColor(232,237,242);
+    doc.text("Vilamarina · Oficina de Gerencia", margenIzq, 18);
+    doc.setTextColor(74,85,104); doc.setFontSize(9);
+    doc.text("Periodo: " + tituloRangoInforme(rango), margenIzq, 31);
+    doc.text("Generado: " + new Date().toLocaleString("es-ES"), 210-margenIzq, 31, { align: "right" });
+    doc.setDrawColor(226,230,234);
+    doc.line(margenIzq, 34, 210-margenIzq, 34);
+  }
+  encabezado();
+
+  doc.autoTable({
+    startY: 40,
+    margin: { top: 38, left: margenIzq, right: margenIzq },
+    head: [["Total","Críticas","Altas","Abiertas","Cerradas"]],
+    body: [[lista.length, criticas, altas, abiertas, cerradas]],
+    theme: "grid",
+    headStyles: { fillColor: [15,27,45], textColor: 255, halign: "center", fontStyle: "bold" },
+    bodyStyles: { halign: "center", fontSize: 12, fontStyle: "bold", textColor: [15,27,45] },
+    styles: { cellPadding: 4 }
+  });
+
+  var y = doc.lastAutoTable.finalY + 10;
+  doc.setTextColor(15,27,45); doc.setFont("helvetica","bold"); doc.setFontSize(12);
+  doc.text("Incidencias por tema", margenIzq, y);
+  doc.autoTable({
+    startY: y + 4,
+    margin: { top: 38, left: margenIzq, right: margenIzq },
+    head: [["Categoría","Cantidad","% del total"]],
+    body: temas.map(function(t){ return [catEs(t.label), t.value, (totalTemas?Math.round(t.value/totalTemas*100):0) + "%"]; }),
+    theme: "striped",
+    headStyles: { fillColor: [245,158,11], textColor: [15,27,45], fontStyle: "bold" },
+    styles: { fontSize: 10 }
+  });
+
+  y = doc.lastAutoTable.finalY + 10;
+  if (y > 250) { doc.addPage(); encabezado(); y = 42; }
+  doc.setTextColor(15,27,45); doc.setFont("helvetica","bold"); doc.setFontSize(12);
+  doc.text("Resumen mensual", margenIzq, y);
+  doc.autoTable({
+    startY: y + 4,
+    margin: { top: 38, left: margenIzq, right: margenIzq },
+    head: [["Mes","Total","Críticas","Altas","Medias","Bajas",catEs("Robatori"),catEs("Danys"),catEs("Accident Parking"),catEs("Accident CC"),catEs("Incidència Baixa"),"Abiertas","Cerradas"]],
+    body: filasMes.map(function(f){
+      return [nombreMes(f.mes), f.total, f.criticas, f.altas, f.medias, f.bajas,
+        f.categorias["Robatori"], f.categorias["Danys"], f.categorias["Accident Parking"], f.categorias["Accident CC"], f.categorias["Incidència Baixa"],
+        f.abiertas, f.cerradas];
+    }),
+    foot: [["TOTAL", lista.length,
+      filasMes.reduce(function(s,f){return s+f.criticas;},0), filasMes.reduce(function(s,f){return s+f.altas;},0),
+      filasMes.reduce(function(s,f){return s+f.medias;},0), filasMes.reduce(function(s,f){return s+f.bajas;},0),
+      filasMes.reduce(function(s,f){return s+f.categorias["Robatori"];},0), filasMes.reduce(function(s,f){return s+f.categorias["Danys"];},0),
+      filasMes.reduce(function(s,f){return s+f.categorias["Accident Parking"];},0), filasMes.reduce(function(s,f){return s+f.categorias["Accident CC"];},0),
+      filasMes.reduce(function(s,f){return s+f.categorias["Incidència Baixa"];},0),
+      filasMes.reduce(function(s,f){return s+f.abiertas;},0), filasMes.reduce(function(s,f){return s+f.cerradas;},0)]],
+    theme: "grid",
+    showFoot: "lastPage",
+    headStyles: { fillColor: [15,27,45], textColor: 255, fontSize: 7.5, halign: "center" },
+    footStyles: { fillColor: [240,242,245], textColor: [15,27,45], fontSize: 7.5, halign: "center", fontStyle: "bold" },
+    bodyStyles: { fontSize: 7.5, halign: "center" },
+    styles: { cellPadding: 2 },
+    didDrawPage: function () { encabezado(); }
+  });
+
+  var paginas = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= paginas; p++) {
+    doc.setPage(p);
+    doc.setFontSize(8); doc.setTextColor(122,143,166);
+    doc.text("Página " + p + " de " + paginas, 210-margenIzq, 290, { align: "right" });
+    doc.text("Documento generado automáticamente por el sistema de gestión de incidencias.", margenIzq, 290);
+  }
+
+  doc.save("informe_incidencias_" + sufijo + "_vilamarina.pdf");
+}
+
+function descargarInformeMensualPDF() {
+  inicializarFechasInformes();
+  var rango = getRangoInformes();
+  var lista = incidenciesEnRango(rango.desde, rango.hasta);
+  var sufijo = (rango.desde||"inicio") + "_a_" + (rango.hasta||"actual");
+  generarPDFInforme(lista, rango, sufijo);
+}
+
+function descargarInformeYTDPDF() {
+  establecerRangoYTD();
+  var rango = getRangoInformes();
+  var lista = incidenciesEnRango(rango.desde, rango.hasta);
+  generarPDFInforme(lista, rango, "YTD_" + rango.hasta.slice(0,4));
 }
 
 // AFECTATS
