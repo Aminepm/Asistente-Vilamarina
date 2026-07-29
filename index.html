@@ -21,6 +21,7 @@
 <div class="topbar-nav">
 <button class="nav-btn active" onclick="canviarVista('incidencies', this)">Incidencias</button>
 <button class="nav-btn" onclick="canviarVista('afectats', this)">Afectados</button>
+<button class="nav-btn" onclick="canviarVista('informes', this)">Informes</button>
 <button class="nav-btn" onclick="canviarVista('backup', this)">Copias de seguridad</button>
 </div>
 </div>
@@ -68,14 +69,12 @@
 <option value="Accident Parking">Accident Parking</option>
 <option value="Accident CC">Accident CC</option>
 <option value="Incidència Baixa">Incidencia leve</option>
-          <option value="Operativa">Operativa</option>
 </select>
 <select id="f-estat" onchange="renderTabla()">
 <option value="">Todos los estados</option>
 <option value="Obert">Abierto</option>
 <option value="Tancat">Cerrado</option>
 </select>
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#4A5568;white-space:nowrap;cursor:pointer"><input type="checkbox" id="f-ocultar-operativa" onchange="renderTabla()"> Ocultar operativas</label>
 <select id="f-mes" onchange="renderTabla()">
 <option value="">Todos los meses</option>
 </select>
@@ -144,6 +143,51 @@
 </thead>
 <tbody id="tbody-afectats"></tbody>
 </table>
+</div>
+</div>
+</div>
+<!-- INFORMES -->
+<div class="view" id="view-informes">
+<div class="page-header">
+<div>
+<h1>Informes de Incidencias</h1>
+<p>Distribución por tema, evolución mensual y descarga de informes por rango de fechas</p>
+</div>
+</div>
+<div class="panel" style="padding:18px 20px;margin-bottom:16px">
+<div class="filters" style="margin-bottom:4px">
+<label style="font-size:12px;font-weight:600;color:#5A6B7B">Desde <input id="inf-desde" type="date"/></label>
+<label style="font-size:12px;font-weight:600;color:#5A6B7B">Hasta <input id="inf-hasta" type="date"/></label>
+<button class="btn btn-outline btn-sm" onclick="aplicarRangoInformes()">Aplicar</button>
+<button class="btn btn-outline btn-sm" onclick="establecerRangoYTD()">Año en curso (YTD)</button>
+<button class="btn btn-outline btn-sm" onclick="establecerRangoTodo()">Todo el histórico</button>
+</div>
+</div>
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+<div class="panel" style="flex:1;min-width:280px;padding:18px 20px">
+<h3 style="font-size:15px;margin-bottom:12px">Incidencias por tema</h3>
+<div id="inf-grafico" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap"></div>
+</div>
+<div class="panel" style="flex:1;min-width:280px;padding:18px 20px">
+<h3 style="font-size:15px;margin-bottom:12px">Resumen mensual</h3>
+<div style="overflow-x:auto"><table>
+<thead><tr><th>Mes</th><th>Total</th><th>Críticas</th><th>Altas</th><th>Abiertas</th></tr></thead>
+<tbody id="inf-tbody-mensual"></tbody>
+</table></div>
+</div>
+</div>
+<div class="backup-panel">
+<h3>Descargar informes</h3>
+<p>El informe mensual desglosa, mes a mes, el número de incidencias, su gravedad y su tema dentro del rango de fechas seleccionado.</p>
+<div class="header-actions">
+<button class="btn btn-primary" onclick="descargarInformeMensual()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+          Descargar informe mensual (rango actual)
+        </button>
+<button class="btn btn-accent" onclick="descargarInformeYTD()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+          Descargar informe año en curso (YTD)
+        </button>
 </div>
 </div>
 </div>
@@ -347,5 +391,5 @@
 </div>
 
 <script src="js/kpis.js?v=1"></script>
-<script src="js/app.js?v=10"></script></body>
+<script src="js/app.js?v=11"></script></body>
 </html>

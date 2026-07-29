@@ -103,6 +103,7 @@ tr:hover td { background: #FAFBFC; }
 .month-card { border: 1px solid #E2E6EA; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
 .month-card-info strong { font-size: 14px; color: #0F1B2D; display: block; }
 .month-card-info span { font-size: 12px; color: #7A8FA6; }
+#inf-desde, #inf-hasta { min-width: 0; width: 150px; margin-left: 4px; }
 .pdf-banner { background: #FFFBF0; border: 1px solid #F59E0B55; border-radius: 10px; padding: 16px 20px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .pdf-banner-text strong { font-size: 14px; color: #0F1B2D; display: block; margin-bottom: 2px; }
 .pdf-banner-text span { font-size: 12px; color: #7A8FA6; }
