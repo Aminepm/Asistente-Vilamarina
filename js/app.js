@@ -511,7 +511,7 @@ function renderAfectats() {
 }
 
 function obrirModalAfectat() {
-  ["a-nom","a-dni","a-tel","a-email","a-adreca","a-hospital","a-part-medic","a-declaracio","a-test-nom","a-test-tel"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  ["a-nom","a-dni","a-tel","a-email","a-adreca","a-hospital","a-part-medic","a-matricula","a-num-ambulancia","a-tecnico","a-declaracio","a-test-nom","a-test-tel"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("a-naix").value="";
   document.getElementById("a-medica").value="No";
   document.getElementById("a-consentiment").value="Sí";
@@ -540,6 +540,9 @@ function guardarAfectat() {
     medica: document.getElementById("a-medica").value,
     hospital: document.getElementById("a-hospital").value.trim(),
     partMedic: document.getElementById("a-part-medic").value.trim(),
+    matricula: document.getElementById("a-matricula").value.trim(),
+    numAmbulancia: document.getElementById("a-num-ambulancia").value.trim(),
+    tecnico: document.getElementById("a-tecnico").value.trim(),
     declaracio: document.getElementById("a-declaracio").value.trim(),
     consentiment: document.getElementById("a-consentiment").value,
     testimonis: document.getElementById("a-testimonis").value,
@@ -571,7 +574,10 @@ function obrirDetallAfectat(id) {
       <div class="detail-item detail-full"><div class="detail-label">Incidència vinculada</div><div class="detail-value">${inc?`#${inc.id} — ${inc.categoria} (${formatData(inc.fecha)}) · ${inc.ubicacion}`:"—"}</div></div>
       <div class="detail-item"><div class="detail-label">Asistencia médica</div><div class="detail-value">${a.medica}</div></div>
       <div class="detail-item"><div class="detail-label">Centre mèdic</div><div class="detail-value">${a.hospital||"—"}</div></div>
-      <div class="detail-item detail-full"><div class="detail-label">Nº part mèdic</div><div class="detail-value">${a.partMedic||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Nº part mèdic</div><div class="detail-value">${a.partMedic||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Número de matrícula</div><div class="detail-value">${a.matricula||"—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Nº identificatiu ambulància</div><div class="detail-value">${a.numAmbulancia||"—"}</div></div>
+      <div class="detail-item detail-full"><div class="detail-label">Tècnic responsable / metge</div><div class="detail-value">${a.tecnico||"—"}</div></div>
     </div></div>
     <div class="detail-section"><div class="detail-section-title">Declaració i testimonis</div>
     <div class="detail-grid">
@@ -583,19 +589,190 @@ function obrirDetallAfectat(id) {
   document.getElementById("modal-detall-afectat").classList.add("open");
 }
 
+function generarFichaAfectadoPDF(a, inc) {
+  if (!window.jspdf || !window.jspdf.jsPDF) { alert("No se ha podido cargar el generador de PDF."); return; }
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ unit: "mm", format: "a4" });
+  var margenIzq = 14, anchoUtil = 182;
+  var cursor = 38;
+
+  // Cabecera
+  if (window.VILAMARINA_LOGO_B64) {
+    var logoW = 34, logoH = logoW / (163/77);
+    doc.addImage(window.VILAMARINA_LOGO_B64, "PNG", 210-margenIzq-logoW, 10, logoW, logoH);
+  }
+  doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(15,27,45);
+  doc.text("FICHA DE AFECTADO / CLIENTE", margenIzq, 20);
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(90,107,123);
+  doc.text("Centre Comercial Vilamarina", margenIzq, 27);
+  doc.setDrawColor(226,230,234); doc.line(margenIzq, 32, 210-margenIzq, 32);
+
+  function campo(x, y, w, h, label, valor) {
+    doc.setDrawColor(209,217,224); doc.setLineWidth(0.2);
+    doc.roundedRect(x, y, w, h, 1, 1);
+    doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(122,143,166);
+    doc.text(label, x+3, y+4.5);
+    if (valor) {
+      doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(15,27,45);
+      var lineas = doc.splitTextToSize(String(valor), w-6);
+      doc.text(lineas.slice(0,2), x+3, y+9.5);
+    }
+  }
+
+  function filaCampos(campos, h) {
+    var n = campos.length;
+    var w = (anchoUtil - 4*(n-1)) / n;
+    var x = margenIzq;
+    campos.forEach(function(c){ campo(x, cursor, w, h, c.label, c.valor); x += w+4; });
+    cursor += h + 4;
+  }
+
+  function tituloSeccion(numero, titulo) {
+    doc.setFillColor(15,27,45);
+    doc.rect(margenIzq, cursor, anchoUtil, 6, "F");
+    doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","bold"); doc.setFontSize(10);
+    doc.text(numero + ". " + titulo, margenIzq+3, cursor+4.3);
+    cursor += 6 + 4;
+  }
+
+  function filaCheckbox(label, marcado) {
+    var y = cursor + 4;
+    doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(15,27,45);
+    doc.text(label, margenIzq, y);
+    var x = margenIzq + doc.getTextWidth(label) + 8;
+    ["Sí","No"].forEach(function(opt){
+      doc.setDrawColor(15,27,45); doc.setLineWidth(0.35);
+      doc.rect(x, y-3.2, 3.6, 3.6);
+      if (marcado === opt) {
+        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(15,27,45);
+        doc.text("X", x+0.7, y-0.5);
+      }
+      doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(15,27,45);
+      doc.text(opt, x+5, y);
+      x += 5 + doc.getTextWidth(opt) + 10;
+    });
+    cursor += 8;
+  }
+
+  function bloqueTexto(label, texto, alto, lineasGuia) {
+    doc.setDrawColor(209,217,224); doc.setLineWidth(0.2);
+    doc.roundedRect(margenIzq, cursor, anchoUtil, alto, 1, 1);
+    doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(122,143,166);
+    doc.text(label, margenIzq+3, cursor+5);
+    if (texto) {
+      doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(26,26,46);
+      doc.text(doc.splitTextToSize(texto, anchoUtil-6), margenIzq+3, cursor+11);
+    } else {
+      doc.setDrawColor(230,232,236);
+      for (var i=1; i<=(lineasGuia||3); i++) {
+        var ly = cursor + 8 + i*6;
+        if (ly < cursor+alto-3) doc.line(margenIzq+3, ly, margenIzq+anchoUtil-3, ly);
+      }
+    }
+    cursor += alto + 4;
+  }
+
+  function filaTestigos(nombre, telefono, alto) {
+    var w = (anchoUtil-4)/2;
+    [{label:"Nombre de los testigos", valor:nombre, x:margenIzq}, {label:"Teléfono de los testigos", valor:telefono, x:margenIzq+w+4}].forEach(function(c){
+      doc.setDrawColor(209,217,224); doc.setLineWidth(0.2);
+      doc.roundedRect(c.x, cursor, w, alto, 1, 1);
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(122,143,166);
+      doc.text(c.label, c.x+3, cursor+5);
+      if (c.valor) {
+        doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(15,27,45);
+        doc.text(doc.splitTextToSize(String(c.valor), w-6).slice(0,2), c.x+3, cursor+11);
+      } else {
+        doc.setDrawColor(230,232,236);
+        for (var i=1; i<=2; i++) {
+          var ly = cursor + 8 + i*6;
+          if (ly < cursor+alto-3) doc.line(c.x+3, ly, c.x+w-3, ly);
+        }
+      }
+    });
+    cursor += alto + 4;
+  }
+
+  function textoLegal() {
+    doc.setFont("helvetica","normal"); doc.setFontSize(7.3); doc.setTextColor(90,107,123);
+    var texto = "De conformidad con el Reglamento (UE) 2016/679 (RGPD) y la Ley Orgánica 3/2018 de Protección de Datos, los datos recogidos en este formulario se utilizarán exclusivamente para la gestión de la incidencia y, en su caso, la tramitación del correspondiente parte de seguro. No serán cedidos a terceros sin consentimiento expreso, salvo obligación legal. Tiene derecho de acceso, rectificación, supresión y portabilidad de sus datos.";
+    var lineas = doc.splitTextToSize(texto, anchoUtil);
+    doc.text(lineas, margenIzq, cursor);
+    cursor += lineas.length*3.2 + 3;
+  }
+
+  // Fila superior
+  filaCampos([
+    { label: "Nº Incidencia", valor: inc ? ("#"+inc.id) : "" },
+    { label: "Fecha", valor: inc ? formatData(inc.fecha) : "" },
+    { label: "Hora", valor: inc ? inc.hora : "" }
+  ], 11);
+
+  // 1. Datos personales del afectado
+  tituloSeccion(1, "DATOS PERSONALES DEL AFECTADO");
+  filaCampos([
+    { label: "Nombre completo *", valor: a ? a.nom : "" },
+    { label: "DNI / NIE / Pasaporte *", valor: a ? a.dni : "" }
+  ], 11);
+  filaCampos([
+    { label: "Fecha de nacimiento", valor: a ? formatData(a.naix) : "" },
+    { label: "Teléfono de contacto *", valor: a ? a.tel : "" },
+    { label: "Correo electrónico", valor: a ? a.email : "" }
+  ], 11);
+
+  // 2. Datos de la incidencia
+  tituloSeccion(2, "DATOS DE LA INCIDENCIA");
+  filaCampos([
+    { label: "Ubicación dentro del CC (zona, planta, tienda...)", valor: inc ? inc.ubicacion : "" },
+    { label: "Vigilante responsable", valor: inc ? inc.vigilant : "" }
+  ], 11);
+  filaCheckbox("¿Requirió asistencia médica? *", a ? a.medica : undefined);
+  filaCampos([
+    { label: "Centro médico / Hospital donde fue atendido", valor: a ? a.hospital : "" },
+    { label: "Nº parte médico / referencia asistencia", valor: a ? a.partMedic : "" }
+  ], 11);
+  filaCampos([
+    { label: "Número de matrícula", valor: a ? a.matricula : "" },
+    { label: "Número identificativo de la ambulancia", valor: a ? a.numAmbulancia : "" },
+    { label: "Nombre del técnico responsable / médico", valor: a ? a.tecnico : "" }
+  ], 11);
+
+  // 3. Declaración del afectado
+  tituloSeccion(3, "DECLARACIÓN DEL AFECTADO");
+  bloqueTexto("Descripción de los hechos según el afectado:", a ? a.declaracio : "", 26, 3);
+
+  // 4. Testigos
+  tituloSeccion(4, "TESTIGOS");
+  filaCheckbox("¿Hay testigos del hecho? *", a ? a.testimonis : undefined);
+  var hayTestigos = a && a.testimonis === "Sí";
+  filaTestigos(hayTestigos ? a.testNom : "", hayTestigos ? a.testTel : "", 16);
+
+  // 5. Consentimiento y firma
+  tituloSeccion(5, "CONSENTIMIENTO Y FIRMA");
+  textoLegal();
+  filaCampos([
+    { label: "Fecha y lugar", valor: inc ? (formatData(inc.fecha) + " · " + inc.ubicacion) : "" },
+    { label: "Firma del afectado", valor: "" }
+  ], 13);
+
+  doc.setFontSize(8); doc.setTextColor(122,143,166);
+  doc.text("Documento generado el " + new Date().toLocaleString("es-ES") + " · Sistema de gestión de incidencias Vilamarina", margenIzq, 292);
+
+  return doc;
+}
+
 function descarregarFitxaAfectat() {
   if (!afectatDetallActual) return;
   const a = afectatDetallActual;
   const inc = incidencies.find(i=>i.id===a.incidenciaId);
-  const txt = `FITXA D'AFECTAT — VILAMARINA\nBarna Porters S.L. · Oficina de Gerència\n${"=".repeat(50)}\n\nDADES PERSONALS\nNom complet: ${a.nom}\nDNI/NIE/Passaport: ${a.dni}\nData de naixement: ${formatData(a.naix)}\nTelèfon: ${a.tel}\nCorreu: ${a.email||"—"}\nAdreça: ${a.adreca||"—"}\n\nINCIDÈNCIA VINCULADA\n${inc?`#${inc.id} — ${inc.categoria} — ${formatData(inc.fecha)} a les ${inc.hora}h\nUbicació: ${inc.ubicacion}\nDescripció: ${inc.descripcion}`:"Cap incidència vinculada"}\n\nASSISTÈNCIA MÈDICA\nAssistència requerida: ${a.medica}\nCentre mèdic: ${a.hospital||"—"}\nNº part mèdic: ${a.partMedic||"—"}\n\nDECLARACIÓ\n${a.declaracio||"—"}\n\nCONSENTIMENT I TESTIMONIS\nConsentiment dades: ${a.consentiment}\nTestimonis: ${a.testimonis}${a.testimonis==="Sí"?`\nNom: ${a.testNom||"—"}\nTel: ${a.testTel||"—"}`:""}\n\n${"=".repeat(50)}\nDocument generat: ${new Date().toLocaleString("ca-ES")}\n`;
-  const blob = new Blob([txt],{type:"text/plain;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a2 = document.createElement("a"); a2.href=url; a2.download=`fitxa_afectat_${a.nom.replace(/ /g,"_")}.txt`; a2.click();
-  URL.revokeObjectURL(url);
+  const doc = generarFichaAfectadoPDF(a, inc);
+  if (doc) doc.save(`ficha_afectado_${a.nom.replace(/ /g,"_")}.pdf`);
 }
 
 function descarregarPlantillaPDF() {
-  alert("La plantilla PDF es descarrega des de l'arxiu 'plantilla_afectat_vilamarina.pdf' que trobaràs a la mateixa carpeta que aquest programa.");
+  const doc = generarFichaAfectadoPDF(null, null);
+  if (doc) doc.save("plantilla_ficha_afectado_vilamarina.pdf");
 }
 
 // BACKUP
