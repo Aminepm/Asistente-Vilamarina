@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  var EXCLUIR = { 'Operativa': 1, 'Incidència Baixa': 1 };
+  var EXCLUIR = { 'Operativa': 1, 'Incidència Baixa': 1, 'Mantenimiento': 1 };
 
   function esNocturno(hora) {
     var hh = parseInt(String(hora || '').split(':')[0], 10);
@@ -121,7 +121,7 @@
     var body = document.getElementById('kpi-seguridad-body');
     if (body) body.innerHTML = bodyHTML(k);
     var sub = document.getElementById('kpi-subtitle');
-    if (sub) sub.textContent = '(solo incidencias relevantes · ' + k.total + ' · excluye operativas y leves)';
+    if (sub) sub.textContent = '(solo incidencias relevantes · ' + k.total + ' · excluye operativa, mantenimiento y leves)';
   }
 
   // Exponer y auto-activar
