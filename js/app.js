@@ -295,15 +295,17 @@ var INF_COLORS = {
   "Danys": "#f59e0b",
   "Accident Parking": "#8b5cf6",
   "Accident CC": "#3b82f6",
+  "Accident Laboral": "#06b6d4",
   "Incidència Baixa": "#10b981"
 };
-var INF_CATEGORIAS = ["Robatori","Danys","Accident Parking","Accident CC","Incidència Baixa"];
+var INF_CATEGORIAS = ["Robatori","Danys","Accident Parking","Accident CC","Accident Laboral","Incidència Baixa"];
 var INF_MESOS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 var INF_CATEGORIA_ES = {
   "Robatori": "Robo",
   "Danys": "Daños",
   "Accident Parking": "Accidente Parking",
   "Accident CC": "Accidente CC",
+  "Accident Laboral": "Accidente laboral",
   "Incidència Baixa": "Incidencia leve"
 };
 function catEs(cat) { return INF_CATEGORIA_ES[cat] || cat; }
@@ -646,10 +648,10 @@ async function generarPDFInforme(lista, rango, sufijo) {
   doc.autoTable({
     startY: y + 4,
     margin: { top: 38, left: margenIzq, right: margenIzq },
-    head: [["Mes","Total","Críticas","Altas","Medias","Bajas",catEs("Robatori"),catEs("Danys"),catEs("Accident Parking"),catEs("Accident CC"),catEs("Incidència Baixa"),"Abiertas","Cerradas"]],
+    head: [["Mes","Total","Críticas","Altas","Medias","Bajas",catEs("Robatori"),catEs("Danys"),catEs("Accident Parking"),catEs("Accident CC"),catEs("Accident Laboral"),catEs("Incidència Baixa"),"Abiertas","Cerradas"]],
     body: filasMes.map(function(f){
       return [nombreMes(f.mes), f.total, f.criticas, f.altas, f.medias, f.bajas,
-        f.categorias["Robatori"], f.categorias["Danys"], f.categorias["Accident Parking"], f.categorias["Accident CC"], f.categorias["Incidència Baixa"],
+        f.categorias["Robatori"], f.categorias["Danys"], f.categorias["Accident Parking"], f.categorias["Accident CC"], f.categorias["Accident Laboral"], f.categorias["Incidència Baixa"],
         f.abiertas, f.cerradas];
     }),
     foot: [["TOTAL", lista.length,
@@ -657,6 +659,7 @@ async function generarPDFInforme(lista, rango, sufijo) {
       filasMes.reduce(function(s,f){return s+f.medias;},0), filasMes.reduce(function(s,f){return s+f.bajas;},0),
       filasMes.reduce(function(s,f){return s+f.categorias["Robatori"];},0), filasMes.reduce(function(s,f){return s+f.categorias["Danys"];},0),
       filasMes.reduce(function(s,f){return s+f.categorias["Accident Parking"];},0), filasMes.reduce(function(s,f){return s+f.categorias["Accident CC"];},0),
+      filasMes.reduce(function(s,f){return s+f.categorias["Accident Laboral"];},0),
       filasMes.reduce(function(s,f){return s+f.categorias["Incidència Baixa"];},0),
       filasMes.reduce(function(s,f){return s+f.abiertas;},0), filasMes.reduce(function(s,f){return s+f.cerradas;},0)]],
     theme: "grid",
@@ -1052,6 +1055,7 @@ renderTabla();
     'Danys':'Daños',
     'Accident Parking':'Accidente Parking',
     'Accident CC':'Accidente CC',
+    'Accident Laboral':'Accidente laboral',
     'Incidència Baixa':'Incidencia leve',
     'Obert':'Abierto',
     'Tancat':'Cerrado'
