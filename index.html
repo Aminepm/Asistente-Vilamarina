@@ -86,13 +86,13 @@
 <table>
 <thead>
 <tr>
-<th style="width:85px">Fecha</th>
-<th style="width:60px">Hora</th>
-<th style="width:90px">Gravedad</th>
-<th style="width:130px">Categoría</th>
+<th style="width:85px;cursor:pointer" onclick="ordenarPor('fecha')">Fecha <span id="orden-fecha" class="orden-icono"></span></th>
+<th style="width:60px;cursor:pointer" onclick="ordenarPor('hora')">Hora <span id="orden-hora" class="orden-icono"></span></th>
+<th style="width:90px;cursor:pointer" onclick="ordenarPor('gravedad')">Gravedad <span id="orden-gravedad" class="orden-icono"></span></th>
+<th style="width:130px;cursor:pointer" onclick="ordenarPor('categoria')">Categoría <span id="orden-categoria" class="orden-icono"></span></th>
 <th style="width:130px">Ubicación</th>
 <th>Resumen</th>
-<th style="width:80px">Estado</th>
+<th style="width:80px;cursor:pointer" onclick="ordenarPor('estat')">Estado <span id="orden-estat" class="orden-icono"></span></th>
 <th style="width:80px">Acciones</th>
 </tr>
 </thead>
