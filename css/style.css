@@ -60,6 +60,8 @@ tr:hover td { background: #FAFBFC; }
 .badge-tancat { background: #EAFAF1; color: #1E8449; } .badge-tancat::before { background: #27AE60; }
 .badge-cat { background: #F0F2F5; color: #4A5568; border: 1px solid #D1D9E0; }
 .badge-cat::before { display: none; }
+.orden-icono { font-size: 9px; color: #7A8FA6; }
+thead th[onclick]:hover { color: #0F1B2D; }
 .row-critica td:first-child { border-left: 3px solid #E74C3C; padding-left: 11px; }
 .row-alta td:first-child { border-left: 3px solid #F39C12; padding-left: 11px; }
 .row-media td:first-child { border-left: 3px solid #2E86C1; padding-left: 11px; }
