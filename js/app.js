@@ -93,9 +93,69 @@ function filtrar() {
   return res;
 }
 
+var ordenTabla = { campo: "fecha", direccion: -1 };
+var GRAVEDADES_EDITABLES = ["Crítica", "Alta", "Media", "Baja"];
+var CATEGORIAS_EDITABLES = ["Robatori", "Danys", "Accident Parking", "Accident CC", "Accident Laboral", "Incidència Baixa", "Operativa", "Mantenimiento"];
+
+function valorOrden(d, campo) {
+  if (campo === "fecha") return (d.fecha || "") + " " + (d.hora || "");
+  if (campo === "hora") return d.hora || "";
+  if (campo === "gravedad") return { "Crítica": 4, "Alta": 3, "Media": 2, "Baja": 1 }[d.gravedad] || 0;
+  if (campo === "categoria") return catEs(d.categoria) || "";
+  if (campo === "estat") return d.estat || "";
+  return "";
+}
+
+function ordenarPor(campo) {
+  if (ordenTabla.campo === campo) { ordenTabla.direccion = -ordenTabla.direccion; }
+  else { ordenTabla.campo = campo; ordenTabla.direccion = 1; }
+  renderTabla();
+}
+
+function actualizarIndicadoresOrden() {
+  ["fecha", "hora", "gravedad", "categoria", "estat"].forEach(function (campo) {
+    var icono = document.getElementById("orden-" + campo);
+    if (!icono) return;
+    icono.textContent = campo === ordenTabla.campo ? (ordenTabla.direccion === 1 ? "▲" : "▼") : "";
+  });
+}
+
+function editarCampo(ev, id, campo) {
+  ev.stopPropagation();
+  var td = ev.currentTarget.closest("td");
+  if (!td) return;
+  var d = incidencies.find(function (i) { return String(i.id) === String(id); });
+  if (!d) return;
+  var opciones = campo === "gravedad" ? GRAVEDADES_EDITABLES : CATEGORIAS_EDITABLES;
+  var valorActual = d[campo];
+  var html = '<select onchange="guardarCampoEditado(this,\'' + id + '\',\'' + campo + '\')" onblur="renderTabla()" style="font-size:12px;padding:2px 4px;border-radius:6px;border:1px solid #D1D9E0">';
+  opciones.forEach(function (op) {
+    var etiqueta = campo === "gravedad" ? op : catEs(op);
+    html += '<option value="' + op + '"' + (op === valorActual ? " selected" : "") + ">" + etiqueta + "</option>";
+  });
+  html += "</select>";
+  td.innerHTML = html;
+  var sel = td.querySelector("select");
+  if (sel) { sel.focus(); if (sel.showPicker) { try { sel.showPicker(); } catch (e) {} } }
+}
+
+function guardarCampoEditado(selectEl, id, campo) {
+  var d = incidencies.find(function (i) { return String(i.id) === String(id); });
+  if (d) d[campo] = selectEl.value;
+  actualitzarMetriques();
+  if (typeof window.renderKPIs === "function") window.renderKPIs();
+  renderTabla();
+}
+
 function renderTabla() {
   const filtrats = filtrar();
+  filtrats.sort(function (a, b) {
+    var va = valorOrden(a, ordenTabla.campo), vb = valorOrden(b, ordenTabla.campo);
+    var cmp = va < vb ? -1 : va > vb ? 1 : 0;
+    return cmp * ordenTabla.direccion;
+  });
   const tbody = document.getElementById("tbody");
+  actualizarIndicadoresOrden();
   if (!filtrats.length) {
     const hayIncidencias = incidencies.some(d => !esCategoriaOperativa(d.categoria));
     tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📋</div>${!hayIncidencias ? "Aún no hay incidencias registradas.<br><small>Haz clic en <strong>Nueva incidencia</strong> para añadir una.</small>" : "Ninguna incidencia coincide con los filtros seleccionados."}</td></tr>`;
@@ -105,8 +165,8 @@ function renderTabla() {
     <tr class="${rowClass(d.gravedad)}">
       <td class="td-muted">${formatData(d.fecha)}</td>
       <td class="td-muted">${d.hora}</td>
-      <td><span class="badge ${badgeGravClass(d.gravedad)}">${badgeGravLabel(d.gravedad)}</span></td>
-      <td><span class="badge badge-cat">${d.categoria}</span></td>
+      <td><span class="badge ${badgeGravClass(d.gravedad)}" style="cursor:pointer" title="Haz clic para cambiar la gravedad" onclick="editarCampo(event,'${d.id}','gravedad')">${badgeGravLabel(d.gravedad)}</span></td>
+      <td><span class="badge badge-cat" style="cursor:pointer" title="Haz clic para cambiar la categoría" onclick="editarCampo(event,'${d.id}','categoria')">${d.categoria}</span></td>
       <td class="td-muted" style="font-size:12px">${d.ubicacion}</td>
       <td style="font-size:12px;color:#4A5568;max-width:200px">${d.resum||d.descripcion}</td>
       <td><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></td>
