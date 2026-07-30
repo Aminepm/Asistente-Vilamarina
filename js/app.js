@@ -139,9 +139,31 @@ function editarCampo(ev, id, campo) {
   if (sel) { sel.focus(); if (sel.showPicker) { try { sel.showPicker(); } catch (e) {} } }
 }
 
+// Envía el cambio de categoría/gravedad al Apps Script para que se
+// guarde en la fila real de la hoja, y no se pierda al recargar la
+// página o en la siguiente auto-actualización. Usa el mismo mecanismo
+// JSONP (script + callback) que la carga de datos, para evitar problemas
+// de CORS al llamar a otro dominio.
+function actualizarEnSheets(fila, campo, valor) {
+  var cbName = "__vilaUpd" + Date.now();
+  var s = document.createElement("script");
+  var limpiar = function () { delete window[cbName]; if (s.parentNode) s.parentNode.removeChild(s); };
+  window[cbName] = function (resp) {
+    if (!resp || !resp.ok) console.warn("[Vilamarina] No se pudo guardar el cambio en Sheets:", resp && resp.error);
+    limpiar();
+  };
+  s.onerror = function () { console.warn("[Vilamarina] Error de red al guardar el cambio en Sheets."); limpiar(); };
+  s.src = VILAMARINA_WEBAPP_URL + "?accion=actualizar&fila=" + encodeURIComponent(fila) +
+    "&campo=" + encodeURIComponent(campo) + "&valor=" + encodeURIComponent(valor) + "&callback=" + cbName;
+  document.body.appendChild(s);
+}
+
 function guardarCampoEditado(selectEl, id, campo) {
   var d = incidencies.find(function (i) { return String(i.id) === String(id); });
-  if (d) d[campo] = selectEl.value;
+  if (d) {
+    d[campo] = selectEl.value;
+    if (d.fila) actualizarEnSheets(d.fila, campo, selectEl.value);
+  }
   actualitzarMetriques();
   if (typeof window.renderKPIs === "function") window.renderKPIs();
   renderTabla();
@@ -1159,6 +1181,7 @@ const VILAMARINA_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwhgSbeZU
 function mapearFilaSheet(f, i) {
   var obj = {
     id: "sheet-" + (f.fecha || "") + "-" + (f.hora || "") + "-" + i,
+    fila: f.fila, // número real de fila en la hoja, para poder editar y guardar el cambio
     fecha: f.fecha || "",
     hora: f.hora || "",
     gravedad: f.gravedad || "",
