@@ -139,12 +139,49 @@ function editarCampo(ev, id, campo) {
   if (sel) { sel.focus(); if (sel.showPicker) { try { sel.showPicker(); } catch (e) {} } }
 }
 
+function vilaJSONP(url) {
+  return new Promise(function (resolve) {
+    var cbName = "__vilaCbW" + Date.now();
+    var s = document.createElement("script");
+    var terminado = false;
+    window[cbName] = function (data) {
+      terminado = true; delete window[cbName]; if (s.parentNode) s.parentNode.removeChild(s);
+      resolve(data);
+    };
+    s.onerror = function () {
+      if (!terminado) { terminado = true; delete window[cbName]; if (s.parentNode) s.parentNode.removeChild(s); resolve(null); }
+    };
+    s.src = url + (url.indexOf("?") !== -1 ? "&" : "?") + "callback=" + cbName;
+    document.body.appendChild(s);
+    setTimeout(function () {
+      if (!terminado) { terminado = true; delete window[cbName]; if (s.parentNode) s.parentNode.removeChild(s); resolve(null); }
+    }, 15000);
+  });
+}
+
 function guardarCampoEditado(selectEl, id, campo) {
   var d = incidencies.find(function (i) { return String(i.id) === String(id); });
-  if (d) d[campo] = selectEl.value;
+  if (!d) return;
+  var valorAnterior = d[campo];
+  var valorNuevo = selectEl.value;
+  d[campo] = valorNuevo;
   actualitzarMetriques();
   if (typeof window.renderKPIs === "function") window.renderKPIs();
   renderTabla();
+  if (!d.filaSheet) return; // incidencia local (no viene de la Sheet): no hay fila que actualizar
+  var url = VILAMARINA_WEBAPP_URL + "?action=guardar&fila=" + encodeURIComponent(d.filaSheet) +
+    "&campo=" + encodeURIComponent(campo) + "&valor=" + encodeURIComponent(valorNuevo) +
+    "&clave=" + encodeURIComponent(VILAMARINA_WRITE_SECRET);
+  vilaJSONP(url).then(function (res) {
+    if (!res || !res.ok) {
+      console.warn("[Vilamarina] No se pudo guardar el cambio:", res && res.error);
+      alert("No se ha podido guardar el cambio en la hoja. Se revierte.");
+      d[campo] = valorAnterior;
+      actualitzarMetriques();
+      if (typeof window.renderKPIs === "function") window.renderKPIs();
+      renderTabla();
+    }
+  });
 }
 
 function renderTabla() {
@@ -1155,10 +1192,12 @@ renderTabla();
    Añadido automáticamente. No borrar.
    ============================================================ */
 const VILAMARINA_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwhgSbeZUEA5aSLEA_O80OsLGVeFn-CLaQuX3rP14TNRQgN8ZSsvij-TWGIREvPBwD0/exec";
+const VILAMARINA_WRITE_SECRET = "227d8184e0f48ea7e5be0691de9601c7e56a72183a97189a";
 
 function mapearFilaSheet(f, i) {
   var obj = {
     id: "sheet-" + (f.fecha || "") + "-" + (f.hora || "") + "-" + i,
+    filaSheet: f.fila || null,
     fecha: f.fecha || "",
     hora: f.hora || "",
     gravedad: f.gravedad || "",
@@ -1211,6 +1250,17 @@ async function cargarDesdeSheets() {
     s.onerror = function () { if (!terminado) { terminado = true; delete window[cbName]; if (s.parentNode) s.parentNode.removeChild(s); if (window.__vilaRetries === undefined) window.__vilaRetries = 0; if (window.__vilaRetries < 4) { window.__vilaRetries++; console.warn("[Vilamarina] Reintentando carga (" + window.__vilaRetries + ")..."); setTimeout(function(){ cargarDesdeSheets().then(resolve); }, 1500); } else { console.warn("[Vilamarina] No se pudo cargar tras varios intentos."); resolve(); } } };
     document.body.appendChild(s);
     setTimeout(function () { if (!terminado) { terminado = true; delete window[cbName]; if (s.parentNode) s.parentNode.removeChild(s); if (window.__vilaRetries === undefined) window.__vilaRetries = 0; if (window.__vilaRetries < 4) { window.__vilaRetries++; console.warn("[Vilamarina] Timeout, reintentando (" + window.__vilaRetries + ")..."); cargarDesdeSheets().then(resolve); } else { console.warn("[Vilamarina] No se pudo cargar tras varios intentos."); resolve(); } } }, 15000);
+  });
+}
+
+function actualizarAhora() {
+  var btn = document.getElementById("btn-actualizar");
+  var texto = document.getElementById("btn-actualizar-texto");
+  if (btn) btn.disabled = true;
+  if (texto) texto.textContent = "Actualizando...";
+  cargarDesdeSheets().finally(function () {
+    if (btn) btn.disabled = false;
+    if (texto) texto.textContent = "Actualizar ahora";
   });
 }
 
