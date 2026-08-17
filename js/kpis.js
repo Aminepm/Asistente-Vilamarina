@@ -23,10 +23,11 @@
     var robosNoct = robosArr.filter(function (i) { return esNocturno(i.hora); }).length;
     return {
       total: rel.length,
-      gravAlta: rel.filter(function (i) { return i.gravedad === 'Alta'; }).length,
+      gravAlta: inc.filter(function (i) { return i.gravedad === 'Alta'; }).length,
       robos: robos,
       danys: rel.filter(function (i) { return i.categoria === 'Danys'; }).length,
       accCC: rel.filter(function (i) { return i.categoria === 'Accident CC'; }).length,
+      accParking: rel.filter(function (i) { return i.categoria === 'Accident Parking'; }).length,
       robosNoct: robosNoct,
       robosCom: robos - robosNoct
     };
@@ -47,17 +48,17 @@
   }
 
   function bodyHTML(k) {
-    var catMax = Math.max(k.danys, k.robos, k.accCC, 1);
+    var catMax = Math.max(k.danys, k.robos, k.accCC, k.accParking, 1);
     var ctxMax = Math.max(k.robosCom, k.robosNoct, 1);
     return '' +
       '<div style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0">' +
         card('Total relevantes', k.total) + card('Gravedad alta', k.gravAlta) +
-        card('Robos', k.robos) + card('Daños', k.danys) + card('Accid. CC', k.accCC) +
+        card('Robos', k.robos) + card('Daños', k.danys) + card('Accid. CC', k.accCC) + card('Accid. Parking', k.accParking) +
       '</div>' +
       '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">' +
         '<div style="flex:1;min-width:240px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px">' +
           '<div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px">Por categoría</div>' +
-          bar('Daños', k.danys, catMax, '#f59e0b') + bar('Robo', k.robos, catMax, '#ef4444') + bar('Accidente CC', k.accCC, catMax, '#8b5cf6') +
+          bar('Daños', k.danys, catMax, '#f59e0b') + bar('Robo', k.robos, catMax, '#ef4444') + bar('Accidente CC', k.accCC, catMax, '#8b5cf6') + bar('Accidente Parking', k.accParking, catMax, '#0ea5e9') +
         '</div>' +
         '<div style="flex:1;min-width:240px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px">' +
           '<div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px">Robos según contexto</div>' +
