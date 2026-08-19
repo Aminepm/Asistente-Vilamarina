@@ -37,6 +37,29 @@ const GEMINI_API_KEY = PROPS.getProperty('GEMINI_API_KEY');
 const GEMINI_MODEL = PROPS.getProperty('GEMINI_MODEL') || 'gemini-3.6-flash';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
 
+// El tier gratuito de Gemini permite 20 peticiones/minuto. Se fuerza un
+// hueco mínimo entre llamadas (3.5s -> ~17/min) para quedarse por debajo de
+// ese límite en vez de solo reaccionar a los 429 cuando ya se ha superado.
+var GEMINI_INTERVALO_MIN_MS = 3500;
+var ULTIMA_LLAMADA_GEMINI_MS = 0;
+
+function esperarTurnoGemini() {
+  var ahora = new Date().getTime();
+  var espera = GEMINI_INTERVALO_MIN_MS - (ahora - ULTIMA_LLAMADA_GEMINI_MS);
+  if (espera > 0) Utilities.sleep(espera);
+}
+
+// Extrae el "Please retry in 16.4s" (u similar) que Gemini incluye en el
+// mensaje de error 429, para esperar el tiempo real que pide en vez de un
+// backoff fijo demasiado corto.
+function extraerEsperaSugeridaMs(cuerpo) {
+  var m = /retry in ([\d.]+)\s*s/i.exec(cuerpo || '');
+  if (!m) return null;
+  var segundos = parseFloat(m[1]);
+  if (isNaN(segundos)) return null;
+  return Math.ceil(segundos * 1000);
+}
+
 // Categoría de reserva cuando la IA no ha podido clasificar el aviso.
 const CATEGORIA_SIN_CLASIFICAR = 'Sin clasificar';
 
@@ -628,14 +651,25 @@ function clasificarConIA(desc) {
     var payloadStr = JSON.stringify(payloadObj);
     Logger.log('Enviando a Gemini: ' + payloadStr.slice(0, 300));
 
+    // El tier gratuito de Gemini limita a 20 peticiones/minuto (visto en la
+    // práctica con errores 429 "RESOURCE_EXHAUSTED"). Se espacian las
+    // llamadas para no acercarse a ese límite en vez de solo reaccionar
+    // cuando ya se ha superado.
+    esperarTurnoGemini();
+
     // Reintentos con backoff para errores temporales de Gemini (429 = límite
     // de peticiones, 503 = modelo con mucha demanda): ambos suelen resolverse
     // solos en pocos segundos, así que merece la pena reintentar antes de
     // rendirse y marcar la incidencia como "Sin clasificar". Otros códigos
-    // (401, 404...) no son temporales y no tiene sentido reintentarlos.
+    // (401, 404...) no son temporales y no tiene sentido reintentarlos. En
+    // los 429 Gemini indica en el propio mensaje cuántos segundos hay que
+    // esperar ("Please retry in 16.4s") — se respeta ese tiempo (con un
+    // tope) en vez de un backoff fijo, porque un backoff de 1-2s es
+    // demasiado corto frente a esos ~10-16s reales y los reintentos se
+    // agotaban sin que la cuota se hubiera liberado.
     var codigo, cuerpo;
     var intentosMax = 3;
-    var esperaMs = 1000;
+    var esperaMs = 2000;
     for (var intento = 1; intento <= intentosMax; intento++) {
       var respuesta = UrlFetchApp.fetch(GEMINI_URL + '?key=' + GEMINI_API_KEY, {
         method: 'post',
@@ -643,14 +677,17 @@ function clasificarConIA(desc) {
         payload: payloadStr,
         muteHttpExceptions: true
       });
+      ULTIMA_LLAMADA_GEMINI_MS = new Date().getTime();
       codigo = respuesta.getResponseCode();
       cuerpo = respuesta.getContentText();
       Logger.log('Gemini respondió (' + codigo + '): ' + cuerpo.slice(0, 500));
       var esErrorTemporal = codigo === 429 || codigo === 503;
       if (!esErrorTemporal || intento === intentosMax) break;
-      Logger.log('Error temporal de Gemini (' + codigo + '), reintentando en ' + esperaMs +
+      var esperaSugerida = extraerEsperaSugeridaMs(cuerpo);
+      var espera = esperaSugerida ? Math.min(esperaSugerida + 500, 20000) : esperaMs;
+      Logger.log('Error temporal de Gemini (' + codigo + '), reintentando en ' + espera +
         'ms (intento ' + (intento + 1) + '/' + intentosMax + ')...');
-      Utilities.sleep(esperaMs);
+      Utilities.sleep(espera);
       esperaMs *= 2;
     }
     if (codigo !== 200) {
