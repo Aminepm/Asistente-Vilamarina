@@ -37,6 +37,29 @@ const GEMINI_API_KEY = PROPS.getProperty('GEMINI_API_KEY');
 const GEMINI_MODEL = PROPS.getProperty('GEMINI_MODEL') || 'gemini-3.6-flash';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
 
+// El tier gratuito de Gemini permite 20 peticiones/minuto. Se fuerza un
+// hueco mínimo entre llamadas (3.5s -> ~17/min) para quedarse por debajo de
+// ese límite en vez de solo reaccionar a los 429 cuando ya se ha superado.
+var GEMINI_INTERVALO_MIN_MS = 3500;
+var ULTIMA_LLAMADA_GEMINI_MS = 0;
+
+function esperarTurnoGemini() {
+  var ahora = new Date().getTime();
+  var espera = GEMINI_INTERVALO_MIN_MS - (ahora - ULTIMA_LLAMADA_GEMINI_MS);
+  if (espera > 0) Utilities.sleep(espera);
+}
+
+// Extrae el "Please retry in 16.4s" (u similar) que Gemini incluye en el
+// mensaje de error 429, para esperar el tiempo real que pide en vez de un
+// backoff fijo demasiado corto.
+function extraerEsperaSugeridaMs(cuerpo) {
+  var m = /retry in ([\d.]+)\s*s/i.exec(cuerpo || '');
+  if (!m) return null;
+  var segundos = parseFloat(m[1]);
+  if (isNaN(segundos)) return null;
+  return Math.ceil(segundos * 1000);
+}
+
 // Categoría de reserva cuando la IA no ha podido clasificar el aviso.
 const CATEGORIA_SIN_CLASIFICAR = 'Sin clasificar';
 
@@ -74,9 +97,15 @@ const OPERATIVA_KEYWORDS_CLARAS = [
   // Protocolo de carga/descarga de camiones (Mercadona, TMA, MGI...).
   'protocolo de camion', 'protocolo del camion', 'operativa descarga trailer',
   'operativa para descarga', 'descarga de camion de mercadona', 'descarga trailer mercadona',
+  'descarga trailer', 'descarga de trailer',
   'recepcion de camion', 'recepción de camión', 'entra camion de compactadora', 'entra camión de compactadora',
+  // Apertura de la salida de emergencia para dejar pasar un camión/tráiler
+  // de logística (no una emergencia real): confirmado con el usuario como
+  // Operativa.
+  'se habilita salida', 'se habilita la salida', 'habilita salida de emergencia',
   // Precierre/cierre progresivo del centro (jerga propia, sin ambigüedad).
-  'precierre',
+  // Cubre tanto "precierre" pegado como "pre cierre" con espacio.
+  'precierre', 'pre cierre',
   // Bloqueo/desbloqueo de ascensores y escaleras por la noche (cubre
   // bloqueo/bloquean/bloquea/bloque, incluidas erratas como "acsensor").
   'bloque',
@@ -479,6 +508,12 @@ var PALABRAS_OPERATIVA_AMPLIADO = [
   'termina de reparar', 'acaba de reparar', 'ya reparado', 'reparado correctamente',
   'bajada de persiana', 'subida de persiana', 'desconecto', 'desconecta',
   'pongo vallas', 'coloco vallas', 'colocamos vallas', 'pone vallas',
+  // Mismo caso que "vallas" pero con la errata frecuente "ballas"/"balla"
+  // (confusión b/v). Se exige el verbo de colocar delante para no capturar
+  // por accidente otras palabras que contienen "balla" (ej. "batalla").
+  'coloca balla', 'coloca ballas', 'colocada de balla', 'colocada de ballas',
+  'colocado de balla', 'colocado de ballas', 'coloco balla', 'coloco ballas',
+  'pongo balla', 'pongo ballas', 'pone balla', 'pone ballas',
   'hay carros por todo el centro', 'entran operarios', 'entro dos operarios',
   'entran dos operarios', 'operarios con escaleras', 'trabajando en la sala',
   'montando unas estanterias', 'montando unas estanterías', 'informo a gerencia',
@@ -628,14 +663,25 @@ function clasificarConIA(desc) {
     var payloadStr = JSON.stringify(payloadObj);
     Logger.log('Enviando a Gemini: ' + payloadStr.slice(0, 300));
 
+    // El tier gratuito de Gemini limita a 20 peticiones/minuto (visto en la
+    // práctica con errores 429 "RESOURCE_EXHAUSTED"). Se espacian las
+    // llamadas para no acercarse a ese límite en vez de solo reaccionar
+    // cuando ya se ha superado.
+    esperarTurnoGemini();
+
     // Reintentos con backoff para errores temporales de Gemini (429 = límite
     // de peticiones, 503 = modelo con mucha demanda): ambos suelen resolverse
     // solos en pocos segundos, así que merece la pena reintentar antes de
     // rendirse y marcar la incidencia como "Sin clasificar". Otros códigos
-    // (401, 404...) no son temporales y no tiene sentido reintentarlos.
+    // (401, 404...) no son temporales y no tiene sentido reintentarlos. En
+    // los 429 Gemini indica en el propio mensaje cuántos segundos hay que
+    // esperar ("Please retry in 16.4s") — se respeta ese tiempo (con un
+    // tope) en vez de un backoff fijo, porque un backoff de 1-2s es
+    // demasiado corto frente a esos ~10-16s reales y los reintentos se
+    // agotaban sin que la cuota se hubiera liberado.
     var codigo, cuerpo;
     var intentosMax = 3;
-    var esperaMs = 1000;
+    var esperaMs = 2000;
     for (var intento = 1; intento <= intentosMax; intento++) {
       var respuesta = UrlFetchApp.fetch(GEMINI_URL + '?key=' + GEMINI_API_KEY, {
         method: 'post',
@@ -643,14 +689,17 @@ function clasificarConIA(desc) {
         payload: payloadStr,
         muteHttpExceptions: true
       });
+      ULTIMA_LLAMADA_GEMINI_MS = new Date().getTime();
       codigo = respuesta.getResponseCode();
       cuerpo = respuesta.getContentText();
       Logger.log('Gemini respondió (' + codigo + '): ' + cuerpo.slice(0, 500));
       var esErrorTemporal = codigo === 429 || codigo === 503;
       if (!esErrorTemporal || intento === intentosMax) break;
-      Logger.log('Error temporal de Gemini (' + codigo + '), reintentando en ' + esperaMs +
+      var esperaSugerida = extraerEsperaSugeridaMs(cuerpo);
+      var espera = esperaSugerida ? Math.min(esperaSugerida + 500, 20000) : esperaMs;
+      Logger.log('Error temporal de Gemini (' + codigo + '), reintentando en ' + espera +
         'ms (intento ' + (intento + 1) + '/' + intentosMax + ')...');
-      Utilities.sleep(esperaMs);
+      Utilities.sleep(espera);
       esperaMs *= 2;
     }
     if (codigo !== 200) {
@@ -758,17 +807,22 @@ function corregirOrtografia(desc) {
 /* === LECTURA Y GUARDADO DE REPORTES ============================= */
 
 function procesarReportes() {
-  // Los asuntos reales observados son variados: "RV: Comunicat al servei
-  // #NNNNNN - CBRE CENTRE COMERCIAL VILAMARINA-VS" (catalán) e
-  // "RV: Incidencias de Servicios #NNNNNN - CBRE CENTRE COMERCIAL
-  // VILAMARINA-VS" (castellano). Ni "Comunicado en el servicio" ni
-  // "serviap.cat" aparecen como texto visible en estos, así que
-  // GmailApp.search no los encontraba y se quedaban sin procesar para
-  // siempre. Lo único común a todos los asuntos vistos hasta ahora es
-  // "VILAMARINA-VS", así que se busca por ahí. El enlace del informe
-  // (serviap.cat) que no lleven se descarta más abajo igualmente
-  // (si (!um) continue), así que ampliar la búsqueda no añade riesgo.
-  var msgs = GmailApp.search('is:unread subject:"VILAMARINA-VS"', 0, 50);
+  // Los asuntos reales observados son muy variados y siguen apareciendo
+  // variantes nuevas: "RV: Comunicat al servei #NNNNNN - CBRE CENTRE
+  // COMERCIAL VILAMARINA-VS" (catalán), "RV: Incidencias de Servicios
+  // #NNNNNN - ..." y "RV: Comunicados de Servicios #NNNNNN - ..." (con
+  // "s" al final, castellano), "RV: Comunicado en el servicio #NNNNNN -
+  // ..." (otra redacción distinta)... Incluso hay casos sin el sufijo
+  // "CBRE CENTRE COMERCIAL VILAMARINA-VS" al final del asunto. Por eso NO
+  // se buscan frases completas (se rompen con cualquier variante nueva de
+  // singular/plural o de preposición), sino palabras sueltas que cubren
+  // todas las variantes vistas hasta ahora. El enlace del informe
+  // (serviap.cat) que no lleven se descarta más abajo igualmente (si (!um)
+  // continue), así que ampliar la búsqueda no añade riesgo de procesar
+  // algo que no toca.
+  var CONSULTA_ASUNTOS = 'is:unread (subject:"VILAMARINA-VS" OR subject:incidencias ' +
+    'OR subject:comunicat OR subject:comunicado OR subject:comunicados OR subject:servei)';
+  var msgs = GmailApp.search(CONSULTA_ASUNTOS, 0, 50);
   var procesados = 0;
   for (var k = 0; k < msgs.length; k++) {
     var thread = msgs[k];
