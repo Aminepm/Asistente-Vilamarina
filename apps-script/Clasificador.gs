@@ -34,8 +34,8 @@
 const PROPS = PropertiesService.getScriptProperties();
 const SHEET_ID = PROPS.getProperty('SHEET_ID');
 const GEMINI_API_KEY = PROPS.getProperty('GEMINI_API_KEY');
-const GEMINI_MODEL = PROPS.getProperty('GEMINI_MODEL') || 'gemini-2.5-flash';
-const GEMINI_URL     = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
+const GEMINI_MODEL = PROPS.getProperty('GEMINI_MODEL') || 'gemini-3.6-flash';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
 
 // Categoría de reserva cuando la IA no ha podido clasificar el aviso.
 const CATEGORIA_SIN_CLASIFICAR = 'Sin clasificar';
@@ -628,16 +628,31 @@ function clasificarConIA(desc) {
     var payloadStr = JSON.stringify(payloadObj);
     Logger.log('Enviando a Gemini: ' + payloadStr.slice(0, 300));
 
-    var respuesta = UrlFetchApp.fetch(GEMINI_URL + '?key=' + GEMINI_API_KEY, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: payloadStr,
-      muteHttpExceptions: true
-    });
-
-    var codigo = respuesta.getResponseCode();
-    var cuerpo = respuesta.getContentText();
-    Logger.log('Gemini respondió (' + codigo + '): ' + cuerpo.slice(0, 500));
+    // Reintentos con backoff para errores temporales de Gemini (429 = límite
+    // de peticiones, 503 = modelo con mucha demanda): ambos suelen resolverse
+    // solos en pocos segundos, así que merece la pena reintentar antes de
+    // rendirse y marcar la incidencia como "Sin clasificar". Otros códigos
+    // (401, 404...) no son temporales y no tiene sentido reintentarlos.
+    var codigo, cuerpo;
+    var intentosMax = 3;
+    var esperaMs = 1000;
+    for (var intento = 1; intento <= intentosMax; intento++) {
+      var respuesta = UrlFetchApp.fetch(GEMINI_URL + '?key=' + GEMINI_API_KEY, {
+        method: 'post',
+        contentType: 'application/json',
+        payload: payloadStr,
+        muteHttpExceptions: true
+      });
+      codigo = respuesta.getResponseCode();
+      cuerpo = respuesta.getContentText();
+      Logger.log('Gemini respondió (' + codigo + '): ' + cuerpo.slice(0, 500));
+      var esErrorTemporal = codigo === 429 || codigo === 503;
+      if (!esErrorTemporal || intento === intentosMax) break;
+      Logger.log('Error temporal de Gemini (' + codigo + '), reintentando en ' + esperaMs +
+        'ms (intento ' + (intento + 1) + '/' + intentosMax + ')...');
+      Utilities.sleep(esperaMs);
+      esperaMs *= 2;
+    }
     if (codigo !== 200) {
       return null;
     }
@@ -681,6 +696,16 @@ function testClasificacion() {
   ejemplos.forEach(function (desc) {
     Logger.log(desc + '  =>  ' + JSON.stringify(clasificarIncidencia(desc)));
   });
+}
+
+// A diferencia de testClasificacion(), este texto no coincide con ninguna
+// palabra clave de la red de seguridad, así que fuerza a que se llame de
+// verdad a clasificarConIA() (Gemini) en vez de que lo resuelva la red de
+// palabras clave. Útil para comprobar que GEMINI_API_KEY/GEMINI_MODEL
+// están bien configurados tras un despliegue nuevo.
+function testGemini() {
+  var texto = 'Un cliente comenta que ha visto una situación que le ha resultado extraña en la tienda de la planta baja.';
+  Logger.log(JSON.stringify(clasificarConIA(texto)));
 }
 
 /* === CORRECCIÓN ORTOGRÁFICA BÁSICA (no clasifica, solo limpia texto) === */
