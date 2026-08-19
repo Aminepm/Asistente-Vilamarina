@@ -759,16 +759,20 @@ function corregirOrtografia(desc) {
 
 function procesarReportes() {
   // Los asuntos reales observados son variados: "RV: Comunicat al servei
-  // #NNNNNN - CBRE CENTRE COMERCIAL VILAMARINA-VS" (catalán) e
-  // "RV: Incidencias de Servicios #NNNNNN - CBRE CENTRE COMERCIAL
-  // VILAMARINA-VS" (castellano). Ni "Comunicado en el servicio" ni
-  // "serviap.cat" aparecen como texto visible en estos, así que
-  // GmailApp.search no los encontraba y se quedaban sin procesar para
-  // siempre. Lo único común a todos los asuntos vistos hasta ahora es
-  // "VILAMARINA-VS", así que se busca por ahí. El enlace del informe
-  // (serviap.cat) que no lleven se descarta más abajo igualmente
-  // (si (!um) continue), así que ampliar la búsqueda no añade riesgo.
-  var msgs = GmailApp.search('is:unread subject:"VILAMARINA-VS"', 0, 50);
+  // #NNNNNN - CBRE CENTRE COMERCIAL VILAMARINA-VS" (catalán), "RV:
+  // Incidencias de Servicios #NNNNNN - CBRE CENTRE COMERCIAL VILAMARINA-VS"
+  // (castellano), "Comunicado de servicio ..." y "Comunicat de servei ..."
+  // (variantes más cortas, sin el prefijo "RV:"). Ni "Comunicado en el
+  // servicio" ni "serviap.cat" aparecen como texto visible en estos, así
+  // que GmailApp.search no los encontraba y se quedaban sin procesar para
+  // siempre. "VILAMARINA-VS" es lo más fiable (aparece en todos los vistos
+  // hasta ahora), pero se añaden también las frases de asunto conocidas por
+  // si algún correo no lleva ese sufijo. El enlace del informe (serviap.cat)
+  // que no lleven se descarta más abajo igualmente (si (!um) continue), así
+  // que ampliar la búsqueda no añade riesgo de procesar algo que no toca.
+  var CONSULTA_ASUNTOS = 'is:unread (subject:"VILAMARINA-VS" OR subject:"Incidencias de Servicios" ' +
+    'OR subject:"Comunicado de servicio" OR subject:"Comunicat de servei")';
+  var msgs = GmailApp.search(CONSULTA_ASUNTOS, 0, 50);
   var procesados = 0;
   for (var k = 0; k < msgs.length; k++) {
     var thread = msgs[k];
