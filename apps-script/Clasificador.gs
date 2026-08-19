@@ -34,8 +34,8 @@
 const PROPS = PropertiesService.getScriptProperties();
 const SHEET_ID = PROPS.getProperty('SHEET_ID');
 const GEMINI_API_KEY = PROPS.getProperty('GEMINI_API_KEY');
-const GEMINI_MODEL = PROPS.getProperty('GEMINI_MODEL') || 'gemini-2.5-flash';
-const GEMINI_URL     = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
+const GEMINI_MODEL = PROPS.getProperty('GEMINI_MODEL') || 'gemini-3.6-flash';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
 
 // Categoría de reserva cuando la IA no ha podido clasificar el aviso.
 const CATEGORIA_SIN_CLASIFICAR = 'Sin clasificar';
@@ -681,6 +681,16 @@ function testClasificacion() {
   ejemplos.forEach(function (desc) {
     Logger.log(desc + '  =>  ' + JSON.stringify(clasificarIncidencia(desc)));
   });
+}
+
+// A diferencia de testClasificacion(), este texto no coincide con ninguna
+// palabra clave de la red de seguridad, así que fuerza a que se llame de
+// verdad a clasificarConIA() (Gemini) en vez de que lo resuelva la red de
+// palabras clave. Útil para comprobar que GEMINI_API_KEY/GEMINI_MODEL
+// están bien configurados tras un despliegue nuevo.
+function testGemini() {
+  var texto = 'Un cliente comenta que ha visto una situación que le ha resultado extraña en la tienda de la planta baja.';
+  Logger.log(JSON.stringify(clasificarConIA(texto)));
 }
 
 /* === CORRECCIÓN ORTOGRÁFICA BÁSICA (no clasifica, solo limpia texto) === */
