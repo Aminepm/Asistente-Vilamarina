@@ -159,28 +159,154 @@ function vilaJSONP(url) {
   });
 }
 
-function guardarCampoEditado(selectEl, id, campo) {
+// Guarda un campo (gravedad/categoria) de una incidencia, tanto en memoria
+// como en la Sheet remota. Devuelve una promesa con true/false según si se
+// guardó bien, para que quien llame decida qué hacer (revertir, avisar,
+// encadenar el siguiente paso...). La usan tanto la edición en línea de la
+// tabla (guardarCampoEditado) como la pantalla de revisión rápida.
+function guardarCampoValor(id, campo, valorNuevo) {
   var d = incidencies.find(function (i) { return String(i.id) === String(id); });
-  if (!d) return;
+  if (!d) return Promise.resolve(false);
   var valorAnterior = d[campo];
-  var valorNuevo = selectEl.value;
   d[campo] = valorNuevo;
   actualitzarMetriques();
   if (typeof window.renderKPIs === "function") window.renderKPIs();
   renderTabla();
-  if (!d.filaSheet) return; // incidencia local (no viene de la Sheet): no hay fila que actualizar
+  if (!d.filaSheet) return Promise.resolve(true); // incidencia local (no viene de la Sheet): no hay fila que actualizar
   var url = VILAMARINA_WEBAPP_URL + "?action=guardar&fila=" + encodeURIComponent(d.filaSheet) +
     "&campo=" + encodeURIComponent(campo) + "&valor=" + encodeURIComponent(valorNuevo) +
     "&clave=" + encodeURIComponent(VILAMARINA_WRITE_SECRET);
-  vilaJSONP(url).then(function (res) {
-    if (!res || !res.ok) {
-      console.warn("[Vilamarina] No se pudo guardar el cambio:", res && res.error);
-      alert("No se ha podido guardar el cambio en la hoja. Se revierte.");
-      d[campo] = valorAnterior;
-      actualitzarMetriques();
-      if (typeof window.renderKPIs === "function") window.renderKPIs();
-      renderTabla();
+  return vilaJSONP(url).then(function (res) {
+    if (res && res.ok) return true;
+    console.warn("[Vilamarina] No se pudo guardar el cambio:", res && res.error);
+    d[campo] = valorAnterior;
+    actualitzarMetriques();
+    if (typeof window.renderKPIs === "function") window.renderKPIs();
+    renderTabla();
+    return false;
+  });
+}
+
+function guardarCampoEditado(selectEl, id, campo) {
+  guardarCampoValor(id, campo, selectEl.value).then(function (ok) {
+    if (!ok) alert("No se ha podido guardar el cambio en la hoja. Se revierte.");
+  });
+}
+
+/* === REVISIÓN RÁPIDA DE INCIDENCIAS "SIN CLASIFICAR" =====================
+   Cola de incidencias que la IA no pudo clasificar, mostradas de una en una
+   en un modal con botones grandes: un clic en la categoría y otro en la
+   gravedad guardan la incidencia y pasan automáticamente a la siguiente. */
+var CATEGORIAS_REVISION = CATEGORIAS_EDITABLES.filter(function (c) { return c !== "Mantenimiento"; });
+var revisarCola = [];
+var revisarIndex = 0;
+var revisarSeleccion = { categoria: null, gravedad: null };
+
+function contarSinClasificar() {
+  return incidencies.filter(function (d) { return d.categoria === "Sin clasificar"; }).length;
+}
+
+function actualizarBotonRevisar() {
+  var n = contarSinClasificar();
+  var btn = document.getElementById("btn-revisar");
+  var badge = document.getElementById("btn-revisar-count");
+  if (!btn || !badge) return;
+  badge.textContent = n;
+  btn.style.display = n > 0 ? "" : "none";
+}
+
+function abrirRevisionSinClasificar() {
+  revisarCola = incidencies.filter(function (d) { return d.categoria === "Sin clasificar"; }).map(function (d) { return d.id; });
+  if (!revisarCola.length) { alert("No hay incidencias sin clasificar ahora mismo."); return; }
+  revisarIndex = 0;
+  document.getElementById("modal-revisar").classList.add("open");
+  renderRevisionActual();
+}
+
+function revisionSiguiente() {
+  revisarIndex++;
+  renderRevisionActual();
+}
+
+function renderRevisionActual() {
+  var body = document.getElementById("revisar-body");
+  var progreso = document.getElementById("revisar-progreso");
+  if (!body || !progreso) return;
+  if (revisarIndex >= revisarCola.length) {
+    progreso.textContent = "";
+    body.innerHTML = '<div style="text-align:center;padding:30px 10px">' +
+      '<div style="font-size:36px;margin-bottom:10px">✅</div>' +
+      '<div style="font-size:15px;color:#0F1B2D;margin-bottom:18px">Todo revisado.</div>' +
+      '<button class="btn btn-primary" onclick="tancarModal(\'modal-revisar\')">Cerrar</button>' +
+      '</div>';
+    return;
+  }
+  var d = incidencies.find(function (i) { return String(i.id) === String(revisarCola[revisarIndex]); });
+  if (!d || d.categoria !== "Sin clasificar") { revisionSiguiente(); return; }
+  revisarSeleccion = { categoria: null, gravedad: null };
+  progreso.textContent = "(" + (revisarIndex + 1) + " de " + revisarCola.length + ")";
+  body.innerHTML =
+    '<div style="font-size:12px;color:#7A8FA6;margin-bottom:6px">' + formatData(d.fecha) + ' · ' + (d.hora || "") + 'h · ' + (d.ubicacion || "") + '</div>' +
+    '<div style="font-size:15px;line-height:1.5;color:#0F1B2D;background:#F8F9FA;border:1px solid #E2E6EA;border-radius:10px;padding:14px;margin-bottom:22px">' +
+      (d.resum || d.descripcion || "") +
+    '</div>' +
+    '<div style="font-size:12px;font-weight:600;color:#5A6B7B;margin-bottom:8px;letter-spacing:.03em">CATEGORÍA</div>' +
+    '<div id="revisar-categorias" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px">' +
+      CATEGORIAS_REVISION.map(function (c) {
+        return '<button type="button" class="btn btn-outline" data-valor="' + c + '" style="font-size:13px" onclick="revisarElegirCategoria(\'' + c + '\')">' + catEs(c) + '</button>';
+      }).join("") +
+    '</div>' +
+    '<div style="font-size:12px;font-weight:600;color:#5A6B7B;margin-bottom:8px;letter-spacing:.03em">GRAVEDAD</div>' +
+    '<div id="revisar-gravedades" style="display:flex;flex-wrap:wrap;gap:8px">' +
+      GRAVEDADES_EDITABLES.map(function (g) {
+        return '<button type="button" class="btn btn-outline" data-valor="' + g + '" style="font-size:13px" onclick="revisarElegirGravedad(\'' + g + '\')">' + g + '</button>';
+      }).join("") +
+    '</div>';
+}
+
+function revisarActualizarBotones() {
+  var contCat = document.getElementById("revisar-categorias");
+  if (contCat) contCat.querySelectorAll("button").forEach(function (btn) {
+    var activo = btn.dataset.valor === revisarSeleccion.categoria;
+    btn.classList.toggle("btn-accent", activo);
+    btn.classList.toggle("btn-outline", !activo);
+  });
+  var contGrav = document.getElementById("revisar-gravedades");
+  if (contGrav) contGrav.querySelectorAll("button").forEach(function (btn) {
+    var activo = btn.dataset.valor === revisarSeleccion.gravedad;
+    btn.classList.toggle("btn-accent", activo);
+    btn.classList.toggle("btn-outline", !activo);
+  });
+}
+
+function revisarElegirCategoria(cat) {
+  revisarSeleccion.categoria = cat;
+  revisarActualizarBotones();
+  revisarIntentarGuardar();
+}
+
+function revisarElegirGravedad(grav) {
+  revisarSeleccion.gravedad = grav;
+  revisarActualizarBotones();
+  revisarIntentarGuardar();
+}
+
+function revisarIntentarGuardar() {
+  if (!revisarSeleccion.categoria || !revisarSeleccion.gravedad) return;
+  var id = revisarCola[revisarIndex];
+  var body = document.getElementById("revisar-body");
+  if (body) body.style.opacity = "0.5";
+  Promise.all([
+    guardarCampoValor(id, "categoria", revisarSeleccion.categoria),
+    guardarCampoValor(id, "gravedad", revisarSeleccion.gravedad)
+  ]).then(function (resultados) {
+    if (body) body.style.opacity = "1";
+    if (resultados.indexOf(false) !== -1) {
+      alert("No se ha podido guardar la clasificación de esta incidencia. Inténtalo de nuevo.");
+      renderRevisionActual();
+      return;
     }
+    revisionSiguiente();
   });
 }
 
@@ -219,6 +345,7 @@ function actualitzarMetriques() {
   document.getElementById("m-alta").textContent = reales.filter(d=>d.gravedad==="Alta").length;
   document.getElementById("m-obertes").textContent = reales.filter(d=>d.estat==="Obert").length;
   document.getElementById("m-mes").textContent = reales.filter(d=>d.fecha.startsWith(mes)).length;
+  actualizarBotonRevisar();
 }
 
 function obrirDetall(id) {
