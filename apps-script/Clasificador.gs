@@ -147,6 +147,13 @@ const OPERATIVA_KEYWORDS_CLARAS = [
   // Peticiones de material administrativo a central, confirmado con el
   // usuario como Operativa.
   'hojas de control de llaves',
+  // Aviso a mantenimiento por una avería de un equipo (ej. una puerta
+  // automática "dando golpes" por una tapa mal cerrada). Va en esta lista
+  // sin guardas porque "dando golpes"/"golpe" activaría el filtro de
+  // palabras de riesgo de la red ampliada, aunque aquí sea sobre una
+  // máquina y no sobre una persona.
+  'avisa mantenimiento', 'aviso a mantenimiento', 'se avisa a mantenimiento',
+  'avisamos a mantenimiento', 'avisamos mantenimiento',
   // Caída/fallo de sistemas técnicos (cámaras, intrusión, control de
   // accesos), confirmado con el usuario como Operativa: es un fallo de
   // equipo, no un incidente causado por una persona.
@@ -271,6 +278,8 @@ function esOperativaClara(desc) {
   if (esEquipoParado(t)) return true;
   if (esObservacionSinRiesgo(t)) return true;
   if (esRevisionBanosCorrecta(t)) return true;
+  if (esRevisionGeneralCorrecta(t)) return true;
+  if (esDescargaEnMuelleClaro(t)) return true;
   return OPERATIVA_PREFIJOS_CLAROS.some(function (p) { return t.indexOf(p) === 0; });
 }
 
@@ -339,7 +348,16 @@ var PALABRAS_HURTO_CONSUMADO = [
   'han hurtado', 'ha hurtado', 'le han robado', 'le ha robado', 'han robado',
   'ha robado', 'hurtan', 'hurta', 'roban', 'sustraen', 'sustrae',
   'sustraccion', 'sustracción', 'ladrona', 'ladron', 'ladrón', 'carterista',
-  'carteristas'
+  'carteristas',
+  // Mismo hurto pero en pretérito imperfecto ("había robado" en vez de "ha
+  // robado"/"han robado"), muy habitual al relatar lo que contó un cliente
+  // o encargado de tienda ("me comenta que le había robado un carrito...").
+  // Se incluye también sin tilde ("habia"), como se escribe a menudo en
+  // estos partes.
+  'había robado', 'habia robado', 'habían robado', 'habian robado',
+  'le había robado', 'le habia robado', 'les había robado', 'les habia robado',
+  'había hurtado', 'habia hurtado', 'habían hurtado', 'habian hurtado',
+  'había sustraido', 'habia sustraido', 'había sustraído'
 ];
 function esHurtoConsumadoClaro(desc) {
   var t = (desc || '').toLowerCase();
@@ -400,6 +418,29 @@ function esRevisionBanosCorrecta(desc) {
   var hayBano = PALABRAS_BANOS.some(function (p) { return t.indexOf(p) !== -1; });
   if (!hayBano) return false;
   return t.indexOf('correcto') !== -1;
+}
+
+// Igual que la revisión de baños pero para cualquier otra revisión
+// rutinaria con resultado "todo correcto" (ej. "se revisa la zona que
+// ayer tenía la fuga de agua y está todo correcto"): mismo criterio,
+// exige la palabra "correcto" explícita para no afectar a un incidente
+// real que por casualidad la mencione, y además excluye las palabras de
+// riesgo por si acaso.
+function esRevisionGeneralCorrecta(desc) {
+  var t = (desc || '').toLowerCase();
+  var esRevision = t.indexOf('revisa') !== -1 || t.indexOf('revisión') !== -1 || t.indexOf('revision') !== -1;
+  if (!esRevision || t.indexOf('correcto') === -1) return false;
+  return !PALABRAS_RIESGO_PERSONA.some(function (p) { return t.indexOf(p) !== -1; });
+}
+
+// Aviso de descarga de mercancía por el muelle de carga (proveedores como
+// Karting, MGI, TMA...): frase de logística, sin relación con la
+// atracción del Karting ni con ningún incidente. Se exige mención del
+// muelle para no capturar "descarga/descargar" en otros contextos.
+function esDescargaEnMuelleClaro(desc) {
+  var t = (desc || '').toLowerCase();
+  if (t.indexOf('muelle') === -1) return false;
+  return t.indexOf('descarg') !== -1;
 }
 
 /**
@@ -494,7 +535,10 @@ function esAltercadoSinLesionClaro(desc) {
 var PALABRAS_INCIVICO_CLARO = [
   'vapeando', 'vapear', 'vapeo', 'jugando con los carros', 'jugando con carros',
   'corriendo por el centro', 'pidiendo limosna', 'mendigando', 'ocupando todo el pasillo',
-  'impidiendo el paso', 'toqueteando', 'molestando a los clientes'
+  'impidiendo el paso', 'toqueteando', 'molestando a los clientes',
+  // Llamada de atención por poner los pies encima de un banco/mobiliario:
+  // aviso rutinario de buenas maneras, sin ningún incidente real de fondo.
+  'pies en el banco', 'pies encima del banco', 'pies sobre el banco'
 ];
 function esComportamientoIncivicoClaro(desc) {
   var t = (desc || '').toLowerCase();
