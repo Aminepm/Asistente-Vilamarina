@@ -97,9 +97,15 @@ const OPERATIVA_KEYWORDS_CLARAS = [
   // Protocolo de carga/descarga de camiones (Mercadona, TMA, MGI...).
   'protocolo de camion', 'protocolo del camion', 'operativa descarga trailer',
   'operativa para descarga', 'descarga de camion de mercadona', 'descarga trailer mercadona',
+  'descarga trailer', 'descarga de trailer',
   'recepcion de camion', 'recepción de camión', 'entra camion de compactadora', 'entra camión de compactadora',
+  // Apertura de la salida de emergencia para dejar pasar un camión/tráiler
+  // de logística (no una emergencia real): confirmado con el usuario como
+  // Operativa.
+  'se habilita salida', 'se habilita la salida', 'habilita salida de emergencia',
   // Precierre/cierre progresivo del centro (jerga propia, sin ambigüedad).
-  'precierre',
+  // Cubre tanto "precierre" pegado como "pre cierre" con espacio.
+  'precierre', 'pre cierre',
   // Bloqueo/desbloqueo de ascensores y escaleras por la noche (cubre
   // bloqueo/bloquean/bloquea/bloque, incluidas erratas como "acsensor").
   'bloque',
@@ -502,6 +508,12 @@ var PALABRAS_OPERATIVA_AMPLIADO = [
   'termina de reparar', 'acaba de reparar', 'ya reparado', 'reparado correctamente',
   'bajada de persiana', 'subida de persiana', 'desconecto', 'desconecta',
   'pongo vallas', 'coloco vallas', 'colocamos vallas', 'pone vallas',
+  // Mismo caso que "vallas" pero con la errata frecuente "ballas"/"balla"
+  // (confusión b/v). Se exige el verbo de colocar delante para no capturar
+  // por accidente otras palabras que contienen "balla" (ej. "batalla").
+  'coloca balla', 'coloca ballas', 'colocada de balla', 'colocada de ballas',
+  'colocado de balla', 'colocado de ballas', 'coloco balla', 'coloco ballas',
+  'pongo balla', 'pongo ballas', 'pone balla', 'pone ballas',
   'hay carros por todo el centro', 'entran operarios', 'entro dos operarios',
   'entran dos operarios', 'operarios con escaleras', 'trabajando en la sala',
   'montando unas estanterias', 'montando unas estanterías', 'informo a gerencia',
