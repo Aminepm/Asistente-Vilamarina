@@ -795,20 +795,21 @@ function corregirOrtografia(desc) {
 /* === LECTURA Y GUARDADO DE REPORTES ============================= */
 
 function procesarReportes() {
-  // Los asuntos reales observados son variados: "RV: Comunicat al servei
-  // #NNNNNN - CBRE CENTRE COMERCIAL VILAMARINA-VS" (catalán), "RV:
-  // Incidencias de Servicios #NNNNNN - CBRE CENTRE COMERCIAL VILAMARINA-VS"
-  // (castellano), "Comunicado de servicio ..." y "Comunicat de servei ..."
-  // (variantes más cortas, sin el prefijo "RV:"). Ni "Comunicado en el
-  // servicio" ni "serviap.cat" aparecen como texto visible en estos, así
-  // que GmailApp.search no los encontraba y se quedaban sin procesar para
-  // siempre. "VILAMARINA-VS" es lo más fiable (aparece en todos los vistos
-  // hasta ahora), pero se añaden también las frases de asunto conocidas por
-  // si algún correo no lleva ese sufijo. El enlace del informe (serviap.cat)
-  // que no lleven se descarta más abajo igualmente (si (!um) continue), así
-  // que ampliar la búsqueda no añade riesgo de procesar algo que no toca.
-  var CONSULTA_ASUNTOS = 'is:unread (subject:"VILAMARINA-VS" OR subject:"Incidencias de Servicios" ' +
-    'OR subject:"Comunicado de servicio" OR subject:"Comunicat de servei")';
+  // Los asuntos reales observados son muy variados y siguen apareciendo
+  // variantes nuevas: "RV: Comunicat al servei #NNNNNN - CBRE CENTRE
+  // COMERCIAL VILAMARINA-VS" (catalán), "RV: Incidencias de Servicios
+  // #NNNNNN - ..." y "RV: Comunicados de Servicios #NNNNNN - ..." (con
+  // "s" al final, castellano), "RV: Comunicado en el servicio #NNNNNN -
+  // ..." (otra redacción distinta)... Incluso hay casos sin el sufijo
+  // "CBRE CENTRE COMERCIAL VILAMARINA-VS" al final del asunto. Por eso NO
+  // se buscan frases completas (se rompen con cualquier variante nueva de
+  // singular/plural o de preposición), sino palabras sueltas que cubren
+  // todas las variantes vistas hasta ahora. El enlace del informe
+  // (serviap.cat) que no lleven se descarta más abajo igualmente (si (!um)
+  // continue), así que ampliar la búsqueda no añade riesgo de procesar
+  // algo que no toca.
+  var CONSULTA_ASUNTOS = 'is:unread (subject:"VILAMARINA-VS" OR subject:incidencias ' +
+    'OR subject:comunicat OR subject:comunicado OR subject:comunicados OR subject:servei)';
   var msgs = GmailApp.search(CONSULTA_ASUNTOS, 0, 50);
   var procesados = 0;
   for (var k = 0; k < msgs.length; k++) {
