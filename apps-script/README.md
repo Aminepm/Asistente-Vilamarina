@@ -16,13 +16,17 @@ Script aparte (no en GitHub), pero se guarda aquí una copia versionada de
    - `GEMINI_API_KEY` — tu clave de la API de Gemini, obtenida en
      [Google AI Studio](https://aistudio.google.com/apikey).
    - `SHEET_ID` — el ID de la Google Sheet (ya debería estar configurado).
-   - `GEMINI_MODEL` (opcional) — por defecto `gemini-2.5-flash`. Puedes
-     probar `gemini-2.5-flash-lite` si buscas menor coste/latencia, o
-     `gemini-2.5-pro` si necesitas más precisión.
+   - `GEMINI_MODEL` (opcional) — por defecto `gemini-3.6-flash`. Google
+     retira modelos con cierta frecuencia (por ejemplo, `gemini-2.5-flash`
+     dejó de estar disponible para cuentas nuevas); si `testGemini()` te
+     da un error 404 "no longer available", el propio mensaje de error te
+     dice qué modelo usar ahora — ponlo aquí como `GEMINI_MODEL`.
    - `WRITE_SECRET` — ya debería estar configurado (edición en línea desde
      la web).
-4. Ejecuta `testClasificacion()` manualmente y revisa
-   Ver -> Registros de ejecución para confirmar que Gemini responde bien.
+4. Ejecuta `testGemini()` manualmente y revisa Ver -> Registros de
+   ejecución para confirmar que Gemini responde bien. A diferencia de
+   `testClasificacion()` (que prueba sobre todo la red de palabras clave),
+   `testGemini()` usa un texto que fuerza a llamar de verdad a la API.
 5. (Opcional) Ejecuta `reclasificarHistorico()` para volver a clasificar
    las incidencias ya guardadas con el nuevo modelo. Como Apps Script
    corta la ejecución a los 6 minutos, puede que necesites ejecutarlo
