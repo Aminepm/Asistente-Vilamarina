@@ -47,6 +47,11 @@
 <svg viewbox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
           <span id="btn-actualizar-texto">Actualizar ahora</span>
         </button>
+<button class="btn btn-outline" id="btn-revisar" onclick="abrirRevisionSinClasificar()" style="display:none">
+<svg viewbox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line></svg>
+          Revisar sin clasificar
+          <span id="btn-revisar-count" class="badge badge-cat" style="margin-left:2px">0</span>
+        </button>
 </div>
 </div>
 <div class="metrics">
@@ -396,6 +401,16 @@
 <button class="btn btn-outline" onclick="tancarModal('modal-detall')">Cerrar</button>
 <button class="btn btn-accent" id="btn-toggle-estat" onclick="toggleEstat()">Marcar como cerrado</button>
 </div>
+</div>
+</div>
+<!-- MODAL REVISIÓN RÁPIDA "SIN CLASIFICAR" -->
+<div class="modal-overlay" id="modal-revisar" onclick="tancarModalFons(event,'modal-revisar')">
+<div class="modal" style="width:560px">
+<div class="modal-header">
+<h2>Revisar sin clasificar <span id="revisar-progreso" style="font-weight:400;font-size:13px;color:#7A8FA6"></span></h2>
+<button class="modal-close" onclick="tancarModal('modal-revisar')">✕</button>
+</div>
+<div class="modal-body" id="revisar-body"></div>
 </div>
 </div>
 <!-- MODAL NOU AFECTAT -->
