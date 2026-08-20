@@ -385,10 +385,45 @@ function obrirDetall(id) {
 function toggleEstat() {
   if (!incidenciaDetallActual) return;
   const d = incidencies.find(i=>i.id===incidenciaDetallActual.id);
-  d.estat = d.estat==="Obert" ? "Tancat" : "Obert";
-  tancarModal("modal-detall");
-  actualitzarMetriques();
-  renderTabla();
+  if (!d) return;
+  const nuevo = d.estat==="Obert" ? "Tancat" : "Obert";
+  guardarCampoValor(d.id, "estat", nuevo).then(function (ok) {
+    if (!ok) { alert("No se ha podido guardar el cambio de estado en la hoja. Se revierte."); return; }
+    tancarModal("modal-detall");
+  });
+}
+
+// Borra una incidencia por completo (fila de la Sheet incluida). Pensado
+// para quitar duplicados: pide confirmación porque no se puede deshacer.
+// Tras borrar en la Sheet, se recarga todo desde Google Sheets en vez de
+// quitar la fila solo en memoria, porque al borrar una fila las demás se
+// desplazan hacia arriba y sus números de fila (filaSheet) guardados en
+// memoria quedarían desactualizados para cualquier edición posterior.
+function eliminarIncidenciaActual() {
+  if (!incidenciaDetallActual) return;
+  const d = incidencies.find(i => i.id === incidenciaDetallActual.id);
+  if (!d) return;
+  if (!confirm("¿Seguro que quieres eliminar esta incidencia? Esta acción no se puede deshacer.")) return;
+
+  if (!d.filaSheet) {
+    incidencies = incidencies.filter(i => i.id !== d.id);
+    tancarModal("modal-detall");
+    actualitzarMetriques();
+    renderTabla();
+    if (typeof window.renderKPIs === "function") window.renderKPIs();
+    return;
+  }
+
+  const url = VILAMARINA_WEBAPP_URL + "?action=eliminar&fila=" + encodeURIComponent(d.filaSheet) +
+    "&clave=" + encodeURIComponent(VILAMARINA_WRITE_SECRET);
+  vilaJSONP(url).then(function (res) {
+    if (!res || !res.ok) {
+      alert("No se ha podido eliminar la incidencia: " + (res && res.error || "error desconocido"));
+      return;
+    }
+    tancarModal("modal-detall");
+    cargarDesdeSheets();
+  });
 }
 
 function descarregarCorreo() {
