@@ -154,6 +154,20 @@ const OPERATIVA_KEYWORDS_CLARAS = [
   // máquina y no sobre una persona.
   'avisa mantenimiento', 'aviso a mantenimiento', 'se avisa a mantenimiento',
   'avisamos a mantenimiento', 'avisamos mantenimiento',
+  // Refuerzos/relevos de personal de seguridad: puramente operativo.
+  'llega el refuerzo', 'llega refuerzo', 'llega la refuerzo',
+  'hace el relevo', 'le hace el relevo', 'hacemos el relevo',
+  // Llegada/marcha de técnicos de mantenimiento/proveedores externos.
+  'llega el tecnico de', 'llega el técnico de', 'se marcha el tecnico de',
+  'se marcha el técnico de',
+  // Incidencias técnicas de infraestructura sin persona implicada.
+  'catenarias', 'camion de las compactadoras', 'camión de las compactadoras',
+  // Colocación de manusas (protecciones de muelle de carga), tarea operativa.
+  'coloco manusas', 'colocado manusas', 'colocada manusas', 'coloca manusas',
+  // Cierre de SAS (puertas de esclusa/acceso), tarea operativa habitual.
+  'cerrado de sas', 'cerrado sas', 'cierre de sas', 'cierre sas',
+  // Reparación de walkies, mantenimiento de equipo de seguridad.
+  'reparar walkies', 'reparar los walkies', 'reparación de walkies', 'reparacion de walkies',
   // Caída/fallo de sistemas técnicos (cámaras, intrusión, control de
   // accesos), confirmado con el usuario como Operativa: es un fallo de
   // equipo, no un incidente causado por una persona.
@@ -237,8 +251,18 @@ function esRevisionJaboneras(t) {
 // eso se exige que aparezca junto a "alarma de incendio"/"alarma de los
 // extintores" y no la palabra suelta "falsa alarma".
 function esFalsaAlarmaTecnica(t) {
-  var esAlarmaTecnica = t.indexOf('alarma de incendio') !== -1 || t.indexOf('alarma de los extintores') !== -1;
-  return esAlarmaTecnica && t.indexOf('falsa alarma') !== -1;
+  var esAlarmaTecnica = t.indexOf('alarma de incendio') !== -1 || t.indexOf('alarma de los extintores') !== -1 ||
+    t.indexOf('alarma de fuego') !== -1;
+  if (esAlarmaTecnica && t.indexOf('falsa alarma') !== -1) return true;
+  // Salta la alarma de fuego pero al revisar no se encuentra fuego real
+  // (caso confirmado con el usuario, p. ej. "no se localiza fuego" /
+  // "no observamos" tras revisar la zona): también es falsa alarma técnica.
+  if (t.indexOf('alarma de fuego') !== -1 &&
+    (t.indexOf('no se localiza fuego') !== -1 || t.indexOf('no se localiza el fuego') !== -1 ||
+      t.indexOf('no observamos') !== -1 || t.indexOf('no se observa fuego') !== -1)) {
+    return true;
+  }
+  return false;
 }
 
 // Regla general confirmada con el usuario: un aviso que SOLO describe la
@@ -278,6 +302,7 @@ function esOperativaClara(desc) {
   if (esEquipoParado(t)) return true;
   if (esObservacionSinRiesgo(t)) return true;
   if (esRevisionBanosCorrecta(t)) return true;
+  if (esRevisionLavabosGeneral(t)) return true;
   if (esRevisionGeneralCorrecta(t)) return true;
   if (esDescargaEnMuelleClaro(t)) return true;
   return OPERATIVA_PREFIJOS_CLAROS.some(function (p) { return t.indexOf(p) === 0; });
@@ -420,6 +445,21 @@ function esRevisionBanosCorrecta(desc) {
   return t.indexOf('correcto') !== -1;
 }
 
+// Ronda de revisión de baños/lavabos SIN mencionar el resultado (a
+// diferencia de esRevisionBanosCorrecta, no exige la palabra "correcto"):
+// confirmado con el usuario como Operativa igualmente, siempre que el
+// texto sea claramente una revisión ("revisa"/"revisión") y no contenga
+// ninguna palabra de riesgo/lesión/hurto que indique un incidente real.
+function esRevisionLavabosGeneral(desc) {
+  var t = (desc || '').toLowerCase();
+  var hayBano = PALABRAS_BANOS.some(function (p) { return t.indexOf(p) !== -1; });
+  if (!hayBano) return false;
+  var esRevision = t.indexOf('revisa') !== -1 || t.indexOf('revisión') !== -1 || t.indexOf('revision') !== -1;
+  if (!esRevision) return false;
+  return !PALABRAS_RIESGO_PERSONA.some(function (p) { return t.indexOf(p) !== -1; }) &&
+    !PALABRAS_HURTO_CONSUMADO.some(function (p) { return t.indexOf(p) !== -1; });
+}
+
 // Igual que la revisión de baños pero para cualquier otra revisión
 // rutinaria con resultado "todo correcto" (ej. "se revisa la zona que
 // ayer tenía la fuga de agua y está todo correcto"): mismo criterio,
@@ -538,7 +578,9 @@ var PALABRAS_INCIVICO_CLARO = [
   'impidiendo el paso', 'toqueteando', 'molestando a los clientes',
   // Llamada de atención por poner los pies encima de un banco/mobiliario:
   // aviso rutinario de buenas maneras, sin ningún incidente real de fondo.
-  'pies en el banco', 'pies encima del banco', 'pies sobre el banco'
+  'pies en el banco', 'pies encima del banco', 'pies sobre el banco',
+  'pies en las sillas', 'pies encima de las sillas', 'pies sobre las sillas',
+  'pies en la silla', 'pies encima de la silla', 'pies sobre la silla'
 ];
 function esComportamientoIncivicoClaro(desc) {
   var t = (desc || '').toLowerCase();
@@ -562,7 +604,13 @@ var PALABRAS_OPERATIVA_AMPLIADO = [
   'entran dos operarios', 'operarios con escaleras', 'trabajando en la sala',
   'montando unas estanterias', 'montando unas estanterías', 'informo a gerencia',
   'se informa a gerencia', 'realizo via baja', 'realiza via baja', 'no hay plazas',
-  'excremento'
+  'excremento',
+  // Aviso a central de seguridad/control: mismo criterio que "avisa
+  // mantenimiento", pero aquí sí se guarda contra palabras de riesgo/
+  // lesión/hurto, porque "avisa a central" también puede preceder un
+  // aviso de un incidente real (ej. una caída con lesión).
+  'avisa central', 'avisa a central', 'aviso a central', 'se avisa a central',
+  'se avisa central', 'avisamos a central', 'avisamos central'
 ];
 function esOperativaAmpliada(desc) {
   var t = (desc || '').toLowerCase();
