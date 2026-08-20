@@ -25,7 +25,13 @@
  *  - Configuración del proyecto -> Propiedades del script:
  *      GROQ_API_KEY = tu clave de la API de Groq (console.groq.com/keys)
  *      SHEET_ID     = el ID de tu Google Sheet
- *      GROQ_MODEL   = (opcional) modelo a usar, por defecto "llama-3.1-8b-instant"
+ *      GROQ_MODEL   = (opcional) modelo a usar, por defecto "openai/gpt-oss-20b".
+ *                     Groq retira modelos con cierta frecuencia (por
+ *                     ejemplo, "llama-3.1-8b-instant" se retiró el
+ *                     16/08/2026); si testGroq() te da un error 404
+ *                     "does not exist or you do not have access to it",
+ *                     mira console.groq.com/docs/models para ver el
+ *                     modelo vigente y ponlo aquí.
  *  - Antes de activar el disparador automático, ejecuta
  *    testClasificacion() desde el editor y revisa
  *    Ver -> Registros de ejecución.
@@ -35,7 +41,7 @@
 const PROPS = PropertiesService.getScriptProperties();
 const SHEET_ID = PROPS.getProperty('SHEET_ID');
 const GROQ_API_KEY = PROPS.getProperty('GROQ_API_KEY');
-const GROQ_MODEL = PROPS.getProperty('GROQ_MODEL') || 'llama-3.1-8b-instant';
+const GROQ_MODEL = PROPS.getProperty('GROQ_MODEL') || 'openai/gpt-oss-20b';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // El tier gratuito de Groq permite 30 peticiones/minuto. Se fuerza un

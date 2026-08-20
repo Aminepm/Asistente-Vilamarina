@@ -17,11 +17,15 @@ Script aparte (no en GitHub), pero se guarda aquí una copia versionada de
      [console.groq.com/keys](https://console.groq.com/keys) (no pide
      tarjeta de crédito).
    - `SHEET_ID` — el ID de la Google Sheet (ya debería estar configurado).
-   - `GROQ_MODEL` (opcional) — por defecto `llama-3.1-8b-instant`. Se eligió
-     este modelo (en vez de uno más grande, como el 70B) porque el tier
-     gratuito le da un límite diario de peticiones mucho más alto (miles al
-     día en vez de solo unos cientos), y para elegir entre 6 categorías fijas
-     no hace falta un modelo grande.
+   - `GROQ_MODEL` (opcional) — por defecto `openai/gpt-oss-20b`. Se eligió
+     un modelo pequeño y rápido (en vez de uno más grande, como el 70B)
+     porque para elegir entre 6 categorías fijas no hace falta un modelo
+     grande. Groq retira modelos con cierta frecuencia (por ejemplo,
+     `llama-3.1-8b-instant`, el modelo que se usó al principio, se retiró
+     el 16/08/2026); si `testGroq()` te da un error 404 "does not exist or
+     you do not have access to it", mira
+     [console.groq.com/docs/models](https://console.groq.com/docs/models)
+     para ver el modelo vigente y ponlo aquí como `GROQ_MODEL`.
    - `WRITE_SECRET` — ya debería estar configurado (edición en línea desde
      la web).
 4. Ejecuta `testGroq()` manualmente y revisa Ver -> Registros de
@@ -48,10 +52,14 @@ Script aparte (no en GitHub), pero se guarda aquí una copia versionada de
   (`api.groq.com/openai/v1/chat/completions`, compatible con el formato de
   OpenAI) en vez de a la API de Gemini.
 - El tier gratuito de Groq permite 30 peticiones/minuto (frente a las 20 de
-  Gemini) y, con el modelo `llama-3.1-8b-instant`, un límite diario de
-  peticiones mucho más alto — pensado para evitar los cortes por cuota
-  agotada (429 `RESOURCE_EXHAUSTED`) que daba Gemini al reclasificar el
-  histórico completo.
+  Gemini), lo que da algo más de margen para evitar los cortes por cuota
+  agotada (429) que daba Gemini al reclasificar el histórico completo. Aun
+  así, `openai/gpt-oss-20b` también tiene un límite diario (del orden de
+  1.000 peticiones/día en el tier gratuito), así que para tandas grandes de
+  reclasificación histórica sigue siendo buena idea desactivar el
+  disparador automático mientras se ejecuta (ver más abajo) y, si hiciera
+  falta, usar `reintentarSinClasificar()` al día siguiente para las filas
+  que se queden en "Sin clasificar" por cuota agotada.
 - Se usa el modo JSON de Groq (`response_format: {type: "json_object"}`)
   con la lista de categorías en el propio prompt. A diferencia del
   `responseSchema` con `enum` de Gemini, esto no obliga al modelo a devolver
