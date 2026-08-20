@@ -1209,7 +1209,7 @@ function manejarGuardarCampo(e) {
     if ((e.parameter.clave || '') !== claveEsperada) throw new Error('Clave incorrecta');
     var fila = parseInt(e.parameter.fila, 10);
     if (!fila || fila < 2) throw new Error('Fila invalida');
-    var columnas = { gravedad: 4, categoria: 5 };
+    var columnas = { gravedad: 4, categoria: 5, estat: 7 };
     var col = columnas[e.parameter.campo];
     if (!col) throw new Error('Campo no editable: ' + e.parameter.campo);
     var valor = e.parameter.valor || '';
@@ -1230,9 +1230,41 @@ function manejarGuardarCampo(e) {
   return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
 
+// Borra por completo la fila de una incidencia (pensado para quitar
+// duplicados). Protegido con la misma clave compartida que
+// manejarGuardarCampo -- no es un sistema de login, solo evita borrados
+// accidentales o de quien encuentre la URL pública sin conocer la clave.
+function manejarEliminarFila(e) {
+  var resultado;
+  try {
+    var claveEsperada = PROPS.getProperty('WRITE_SECRET') || '';
+    if (!claveEsperada) throw new Error('WRITE_SECRET no configurado en Propiedades del script');
+    if ((e.parameter.clave || '') !== claveEsperada) throw new Error('Clave incorrecta');
+    var fila = parseInt(e.parameter.fila, 10);
+    if (!fila || fila < 2) throw new Error('Fila invalida');
+    var hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+    if (fila > hoja.getLastRow()) throw new Error('La fila ya no existe');
+    hoja.deleteRow(fila);
+    resultado = { ok: true };
+  } catch (err) {
+    resultado = { ok: false, error: String(err) };
+  }
+  var json = JSON.stringify(resultado);
+  var callback = e && e.parameter && e.parameter.callback;
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
+}
+
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'guardar') {
     return manejarGuardarCampo(e);
+  }
+  if (e && e.parameter && e.parameter.action === 'eliminar') {
+    return manejarEliminarFila(e);
   }
 
   const hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
