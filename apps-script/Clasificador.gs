@@ -1,6 +1,6 @@
 /******************************************************************
  * Vilamarina - Clasificación automática de reportes de seguridad
- * Google Apps Script + Gemini (Google AI)
+ * Google Apps Script + Groq (API compatible con OpenAI)
  *
  * La IA decide casi siempre la categoría y la gravedad. La única
  * excepción es una red de seguridad mínima con un puñado de palabras
@@ -8,12 +8,13 @@
  * rondas rutinarias, aperturas/puesta en marcha) que se comprueban
  * ANTES de llamar a la IA: en las pruebas, el modelo confundía justo
  * estos casos con "Incidencia leve" en vez de "Operativa". Todo lo
- * demás (robo, daños, accidentes) lo decide exclusivamente Gemini.
+ * demás (robo, daños, accidentes) lo decide exclusivamente Groq.
  *
- * NOTA: la clasificación se pide con "structured output" (responseSchema
- * con un enum de las categorías exactas), para que Gemini devuelva
- * siempre una de las categorías válidas en JSON, sin tener que parsear
- * texto libre ni depender de que el modelo "adivine" el formato.
+ * NOTA: la clasificación se pide en "JSON mode" (response_format
+ * json_object) con la lista de categorías válidas en el propio prompt,
+ * para que el modelo devuelva siempre JSON parseable; la categoría
+ * concreta se valida igualmente contra CATEGORIA_A_GRAVEDAD antes de
+ * usarla, por si el modelo se inventa un valor fuera de la lista.
  *
  * Si la IA no puede responder (clave no configurada, sin cuota, error
  * de red...), la incidencia se guarda como "Sin clasificar" para
@@ -22,9 +23,15 @@
  *
  * CONFIGURACIÓN (una sola vez):
  *  - Configuración del proyecto -> Propiedades del script:
- *      GEMINI_API_KEY = tu clave de la API de Gemini (Google AI Studio)
- *      SHEET_ID       = el ID de tu Google Sheet
- *      GEMINI_MODEL   = (opcional) modelo a usar, por defecto "gemini-2.5-flash"
+ *      GROQ_API_KEY = tu clave de la API de Groq (console.groq.com/keys)
+ *      SHEET_ID     = el ID de tu Google Sheet
+ *      GROQ_MODEL   = (opcional) modelo a usar, por defecto "openai/gpt-oss-20b".
+ *                     Groq retira modelos con cierta frecuencia (por
+ *                     ejemplo, "llama-3.1-8b-instant" se retiró el
+ *                     16/08/2026); si testGroq() te da un error 404
+ *                     "does not exist or you do not have access to it",
+ *                     mira console.groq.com/docs/models para ver el
+ *                     modelo vigente y ponlo aquí.
  *  - Antes de activar el disparador automático, ejecuta
  *    testClasificacion() desde el editor y revisa
  *    Ver -> Registros de ejecución.
@@ -33,27 +40,39 @@
 
 const PROPS = PropertiesService.getScriptProperties();
 const SHEET_ID = PROPS.getProperty('SHEET_ID');
-const GEMINI_API_KEY = PROPS.getProperty('GEMINI_API_KEY');
-const GEMINI_MODEL = PROPS.getProperty('GEMINI_MODEL') || 'gemini-3.6-flash';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
+const GROQ_API_KEY = PROPS.getProperty('GROQ_API_KEY');
+const GROQ_MODEL = PROPS.getProperty('GROQ_MODEL') || 'openai/gpt-oss-20b';
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// El tier gratuito de Gemini permite 20 peticiones/minuto. Se fuerza un
-// hueco mínimo entre llamadas (3.5s -> ~17/min) para quedarse por debajo de
+// El tier gratuito de Groq permite 30 peticiones/minuto. Se fuerza un
+// hueco mínimo entre llamadas (2.2s -> ~27/min) para quedarse por debajo de
 // ese límite en vez de solo reaccionar a los 429 cuando ya se ha superado.
-var GEMINI_INTERVALO_MIN_MS = 3500;
-var ULTIMA_LLAMADA_GEMINI_MS = 0;
+var GROQ_INTERVALO_MIN_MS = 2200;
+var ULTIMA_LLAMADA_GROQ_MS = 0;
 
-function esperarTurnoGemini() {
+function esperarTurnoGroq() {
   var ahora = new Date().getTime();
-  var espera = GEMINI_INTERVALO_MIN_MS - (ahora - ULTIMA_LLAMADA_GEMINI_MS);
+  var espera = GROQ_INTERVALO_MIN_MS - (ahora - ULTIMA_LLAMADA_GROQ_MS);
   if (espera > 0) Utilities.sleep(espera);
 }
 
-// Extrae el "Please retry in 16.4s" (u similar) que Gemini incluye en el
-// mensaje de error 429, para esperar el tiempo real que pide en vez de un
-// backoff fijo demasiado corto.
-function extraerEsperaSugeridaMs(cuerpo) {
-  var m = /retry in ([\d.]+)\s*s/i.exec(cuerpo || '');
+// Groq indica cuánto esperar tras un 429 en la cabecera HTTP "Retry-After"
+// (segundos), a diferencia de Gemini que lo incluía en el texto del error.
+// Como red de seguridad, si la cabecera no viniera, se intenta también
+// sacarlo del cuerpo del error por si el mensaje lo menciona en texto
+// ("retry in Xs" / "try again in Xs").
+function extraerEsperaSugeridaMs(cuerpo, cabeceras) {
+  if (cabeceras) {
+    for (var key in cabeceras) {
+      if (key.toLowerCase() === 'retry-after') {
+        var valor = cabeceras[key];
+        if (Array.isArray(valor)) valor = valor[0];
+        var segundosCabecera = parseFloat(valor);
+        if (!isNaN(segundosCabecera)) return Math.ceil(segundosCabecera * 1000);
+      }
+    }
+  }
+  var m = /(?:retry|try again) in ([\d.]+)\s*s/i.exec(cuerpo || '');
   if (!m) return null;
   var segundos = parseFloat(m[1]);
   if (isNaN(segundos)) return null;
@@ -689,10 +708,10 @@ function clasificarIncidencia(desc) {
   return { categoria: CATEGORIA_SIN_CLASIFICAR, gravedad: 'Media' };
 }
 
-/* === CLASIFICACIÓN (Google Gemini) =================== */
+/* === CLASIFICACIÓN (Groq) =================== */
 
 // Categorías reales que usa la web (js/app.js) y su descripción para el
-// prompt de Gemini. Mismo criterio que con el modelo anterior: frases
+// prompt de Groq. Mismo criterio que con el modelo anterior: frases
 // cortas y sin ejemplos incrustados, para no liar al modelo con casos
 // límite que ya cubre la red de palabras clave (sobre todo Operativa).
 // OJO: "Incidència Baixa" lleva tilde en la "è" (grafía catalana) — la
@@ -700,7 +719,7 @@ function clasificarIncidencia(desc) {
 // IMPORTANTE: NO se incluye "Accident Laboral" como categoría de la IA.
 // Se decide EXCLUSIVAMENTE por la regla de palabras clave
 // (categoriaAccidentePersonaClaro), nunca por la IA.
-var CATEGORIAS_GEMINI = [
+var CATEGORIAS_GROQ = [
   { categoria: 'Robatori', descripcion: 'un robo o hurto, consumado o en grado de tentativa' },
   { categoria: 'Danys', descripcion: 'daños materiales o vandalismo, sin ninguna persona herida' },
   { categoria: 'Accident Parking', descripcion: 'un accidente sufrido por una persona dentro del parking o aparcamiento' },
@@ -718,78 +737,70 @@ var CATEGORIA_A_GRAVEDAD = {
 };
 
 /**
- * Clasifica un texto llamando exclusivamente a Gemini. Devuelve
+ * Clasifica un texto llamando exclusivamente a Groq. Devuelve
  * {categoria, gravedad} o null si la IA no ha podido clasificar (quien
  * llame decide qué hacer; no hay respaldo por reglas).
  */
 function clasificarConIA(desc) {
-  if (!GEMINI_API_KEY) {
-    Logger.log('GEMINI_API_KEY no configurada en Propiedades del script.');
+  if (!GROQ_API_KEY) {
+    Logger.log('GROQ_API_KEY no configurada en Propiedades del script.');
     return null;
   }
   try {
-    var nombresCategorias = CATEGORIAS_GEMINI.map(function (c) { return c.categoria; });
-    var descripcionCategorias = CATEGORIAS_GEMINI.map(function (c) {
+    var descripcionCategorias = CATEGORIAS_GROQ.map(function (c) {
       return '- ' + c.categoria + ': ' + c.descripcion;
     }).join('\n');
 
     var prompt = 'Eres un clasificador de partes de seguridad de un centro comercial. ' +
       'Lee el siguiente aviso y elige EXACTAMENTE una categoría de esta lista:\n' +
       descripcionCategorias +
-      '\n\nAviso:\n"' + desc + '"';
+      '\n\nAviso:\n"' + desc + '"' +
+      '\n\nResponde SOLO con un JSON de la forma {"categoria": "<una de las categorías de arriba, tal cual>"}. ' +
+      'No añadas texto ni explicación fuera del JSON.';
 
     var payloadObj = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'OBJECT',
-          properties: {
-            categoria: { type: 'STRING', enum: nombresCategorias }
-          },
-          required: ['categoria']
-        }
-      }
+      model: GROQ_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [{ role: 'user', content: prompt }]
     };
     var payloadStr = JSON.stringify(payloadObj);
-    Logger.log('Enviando a Gemini: ' + payloadStr.slice(0, 300));
+    Logger.log('Enviando a Groq: ' + payloadStr.slice(0, 300));
 
-    // El tier gratuito de Gemini limita a 20 peticiones/minuto (visto en la
-    // práctica con errores 429 "RESOURCE_EXHAUSTED"). Se espacian las
-    // llamadas para no acercarse a ese límite en vez de solo reaccionar
+    // El tier gratuito de Groq limita a 30 peticiones/minuto. Se espacian
+    // las llamadas para no acercarse a ese límite en vez de solo reaccionar
     // cuando ya se ha superado.
-    esperarTurnoGemini();
+    esperarTurnoGroq();
 
-    // Reintentos con backoff para errores temporales de Gemini (429 = límite
+    // Reintentos con backoff para errores temporales de Groq (429 = límite
     // de peticiones, 503 = modelo con mucha demanda): ambos suelen resolverse
     // solos en pocos segundos, así que merece la pena reintentar antes de
     // rendirse y marcar la incidencia como "Sin clasificar". Otros códigos
     // (401, 404...) no son temporales y no tiene sentido reintentarlos. En
-    // los 429 Gemini indica en el propio mensaje cuántos segundos hay que
-    // esperar ("Please retry in 16.4s") — se respeta ese tiempo (con un
-    // tope) en vez de un backoff fijo, porque un backoff de 1-2s es
-    // demasiado corto frente a esos ~10-16s reales y los reintentos se
-    // agotaban sin que la cuota se hubiera liberado.
+    // los 429 Groq indica en la cabecera "Retry-After" cuántos segundos hay
+    // que esperar — se respeta ese tiempo (con un tope) en vez de un backoff
+    // fijo, porque un backoff de 1-2s puede ser demasiado corto frente al
+    // tiempo real que pide la API.
     var codigo, cuerpo;
     var intentosMax = 3;
     var esperaMs = 2000;
     for (var intento = 1; intento <= intentosMax; intento++) {
-      var respuesta = UrlFetchApp.fetch(GEMINI_URL + '?key=' + GEMINI_API_KEY, {
+      var respuesta = UrlFetchApp.fetch(GROQ_URL, {
         method: 'post',
         contentType: 'application/json',
+        headers: { Authorization: 'Bearer ' + GROQ_API_KEY },
         payload: payloadStr,
         muteHttpExceptions: true
       });
-      ULTIMA_LLAMADA_GEMINI_MS = new Date().getTime();
+      ULTIMA_LLAMADA_GROQ_MS = new Date().getTime();
       codigo = respuesta.getResponseCode();
       cuerpo = respuesta.getContentText();
-      Logger.log('Gemini respondió (' + codigo + '): ' + cuerpo.slice(0, 500));
+      Logger.log('Groq respondió (' + codigo + '): ' + cuerpo.slice(0, 500));
       var esErrorTemporal = codigo === 429 || codigo === 503;
       if (!esErrorTemporal || intento === intentosMax) break;
-      var esperaSugerida = extraerEsperaSugeridaMs(cuerpo);
+      var esperaSugerida = extraerEsperaSugeridaMs(cuerpo, respuesta.getAllHeaders());
       var espera = esperaSugerida ? Math.min(esperaSugerida + 500, 20000) : esperaMs;
-      Logger.log('Error temporal de Gemini (' + codigo + '), reintentando en ' + espera +
+      Logger.log('Error temporal de Groq (' + codigo + '), reintentando en ' + espera +
         'ms (intento ' + (intento + 1) + '/' + intentosMax + ')...');
       Utilities.sleep(espera);
       esperaMs *= 2;
@@ -799,24 +810,23 @@ function clasificarConIA(desc) {
     }
 
     var datos = JSON.parse(cuerpo);
-    var texto = datos && datos.candidates && datos.candidates[0] &&
-      datos.candidates[0].content && datos.candidates[0].content.parts &&
-      datos.candidates[0].content.parts[0] && datos.candidates[0].content.parts[0].text;
+    var texto = datos && datos.choices && datos.choices[0] &&
+      datos.choices[0].message && datos.choices[0].message.content;
     if (!texto) {
-      Logger.log('Respuesta de Gemini sin contenido reconocible (posible bloqueo por safety o corte por longitud).');
+      Logger.log('Respuesta de Groq sin contenido reconocible.');
       return null;
     }
 
     var resultado = JSON.parse(texto);
     var categoria = resultado && resultado.categoria;
     if (!CATEGORIA_A_GRAVEDAD.hasOwnProperty(categoria)) {
-      Logger.log('Categoría de Gemini no reconocida: ' + categoria);
+      Logger.log('Categoría de Groq no reconocida: ' + categoria);
       return null;
     }
-    Logger.log('IA (Gemini): "' + categoria + '"');
+    Logger.log('IA (Groq): "' + categoria + '"');
     return { categoria: categoria, gravedad: CATEGORIA_A_GRAVEDAD[categoria] };
   } catch (e) {
-    Logger.log('Excepción llamando a Gemini: ' + e);
+    Logger.log('Excepción llamando a Groq: ' + e);
     return null;
   }
 }
@@ -841,10 +851,10 @@ function testClasificacion() {
 
 // A diferencia de testClasificacion(), este texto no coincide con ninguna
 // palabra clave de la red de seguridad, así que fuerza a que se llame de
-// verdad a clasificarConIA() (Gemini) en vez de que lo resuelva la red de
-// palabras clave. Útil para comprobar que GEMINI_API_KEY/GEMINI_MODEL
-// están bien configurados tras un despliegue nuevo.
-function testGemini() {
+// verdad a clasificarConIA() (Groq) en vez de que lo resuelva la red de
+// palabras clave. Útil para comprobar que GROQ_API_KEY/GROQ_MODEL están
+// bien configurados tras un despliegue nuevo.
+function testGroq() {
   var texto = 'Un cliente comenta que ha visto una situación que le ha resultado extraña en la tienda de la planta baja.';
   Logger.log(JSON.stringify(clasificarConIA(texto)));
 }
@@ -1103,6 +1113,70 @@ function reclasificarHistorico() {
 function reiniciarReclasificacionHistorico() {
   PROPS.deleteProperty(PROP_ULTIMA_FILA_RECLASIFICADA);
   Logger.log('Progreso reiniciado. La próxima ejecución de reclasificarHistorico() empezará desde la primera fila.');
+}
+
+/* === REINTENTO: solo las filas que se quedaron "Sin clasificar" ===
+   A diferencia de reclasificarHistorico() (que recorre TODA la hoja fila
+   a fila y nunca vuelve atrás), esta función solo repasa las filas que
+   AHORA MISMO están en "Sin clasificar". En la inmensa mayoría de los
+   casos eso solo puede venir de que la llamada a la IA fallara (por
+   ejemplo, un 429 de cuota) durante el pase anterior — no hace falta
+   relanzar toda la hoja para intentarlo de nuevo. Como no
+   toca las filas ya bien clasificadas, no gasta cuota en vano y se
+   puede ejecutar varias veces seguidas sin llevar la cuenta de por
+   dónde se quedó: cada ejecución ve, sencillamente, menos filas "Sin
+   clasificar" que la anterior.
+
+   Ejecútala manualmente (▶ Ejecutar -> reintentarSinClasificar) las
+   veces que haga falta hasta que el log diga que no queda ninguna. */
+function reintentarSinClasificar() {
+  var inicioEjecucion = new Date().getTime();
+  var hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+  var datos = hoja.getDataRange().getValues();
+  var inicio = 0;
+  if (datos.length > 0 && !(datos[0][0] instanceof Date)) {
+    inicio = 1; // fila 0 es cabecera
+  }
+
+  var revisadas = 0, corregidas = 0, siguenSinClasificar = 0;
+  var agotado = false;
+  for (var i = inicio; i < datos.length; i++) {
+    if (new Date().getTime() - inicioEjecucion > TIEMPO_LIMITE_MS) {
+      agotado = true;
+      break;
+    }
+    var f = datos[i];
+    // Columnas (según guardarIncidencia): 0 marca, 1 fecha, 2 hora,
+    // 3 gravedad, 4 categoria, 5 resumen, 6 estado, 7 original, 8 enlace.
+    if (f[4] !== CATEGORIA_SIN_CLASIFICAR) continue;
+
+    var textoOriginal = f[7] || f[5];
+    if (!textoOriginal) continue;
+    revisadas++;
+
+    var textoCorregido = corregirOrtografia(textoOriginal);
+    var resultado = clasificarIncidencia(textoCorregido);
+
+    if (resultado.categoria !== CATEGORIA_SIN_CLASIFICAR) {
+      hoja.getRange(i + 1, 5).setValue(resultado.categoria); // columna E
+      hoja.getRange(i + 1, 4).setValue(resultado.gravedad);  // columna D
+      corregidas++;
+      Logger.log('Fila ' + (i + 1) + ': "Sin clasificar" -> "' + resultado.categoria + '/' + resultado.gravedad + '"');
+    } else {
+      siguenSinClasificar++;
+    }
+    if (textoCorregido !== textoOriginal) {
+      hoja.getRange(i + 1, 6).setValue(textoCorregido.slice(0, 250));  // columna F (resumen)
+      hoja.getRange(i + 1, 8).setValue(textoCorregido.slice(0, 1000)); // columna H (original)
+    }
+    Utilities.sleep(300);
+  }
+
+  Logger.log('Reintento de "Sin clasificar": ' + revisadas + ' revisadas, ' + corregidas +
+    ' corregidas, ' + siguenSinClasificar + ' siguen sin clasificar.' +
+    (agotado
+      ? ' Quedan filas por revisar (se acabó el tiempo de esta ejecución): vuelve a ejecutar reintentarSinClasificar() para continuar.'
+      : ' Recorrido completo de la hoja: no queda ninguna fila pendiente de este repaso.'));
 }
 
 /* === API WEB: devuelve las incidencias de la hoja en JSON ========
