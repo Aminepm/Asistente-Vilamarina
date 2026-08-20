@@ -15,21 +15,83 @@
     return hh >= 23 || hh < 9;
   }
 
+  // La hoja no tiene columna de ubicación estructurada (el campo
+  // "ubicacion" del frontend viene fijo a "Vilamarina" para las
+  // incidencias que llegan de la Sheet), así que la única forma de
+  // aproximar "qué zona concentra más incidentes" es buscar nombres de
+  // zona conocidos en el texto libre (resum/descripcion) — igual que la
+  // red de palabras clave de clasificación del Apps Script. Es una
+  // aproximación: si el texto no menciona ninguna zona reconocida, esa
+  // incidencia simplemente no cuenta para ninguna zona.
+  var ZONAS = [
+    { nombre: 'Gimnasio / aparcabicis', patrones: ['gimnasio', 'aparcabicis', 'aparca bicis', 'aparcabicicletas'] },
+    { nombre: 'Parking / aparcamiento', patrones: ['parking', 'párking', 'aparcamiento'] },
+    { nombre: 'Zona Renfe / accesos exteriores', patrones: ['renfe', 'estación', 'estacion'] },
+    { nombre: 'Muelles de carga', patrones: ['muelle'] },
+    { nombre: 'Mercadona', patrones: ['mercadona'] },
+    { nombre: 'Zona de restauración', patrones: ['restauracion', 'restauración', 'foodcourt', 'food court'] },
+    { nombre: 'Ascensores', patrones: ['ascensor'] },
+    { nombre: 'Escaleras mecánicas', patrones: ['escalera mecanica', 'escalera mecánica', 'escaleras mecanicas', 'escaleras mecánicas'] },
+    { nombre: 'Aseos / lavabos', patrones: ['baño', 'baños', 'lavabo', 'lavabos', 'aseo', 'aseos'] }
+  ];
+  function detectarZona(texto) {
+    var t = (texto || '').toLowerCase();
+    for (var i = 0; i < ZONAS.length; i++) {
+      if (ZONAS[i].patrones.some(function (p) { return t.indexOf(p) !== -1; })) return ZONAS[i].nombre;
+    }
+    return null;
+  }
+
+  // Consejo de prevención asociado a cada categoría, usado por la
+  // categoría que resulte ser realmente la más frecuente (antes estaba
+  // fijo en "Daños" sin comprobar los datos).
+  var CONSEJO_CATEGORIA = {
+    'Robatori': 'Reforzar la vigilancia en sala y la coordinación con el personal de los locales durante la apertura, y el CCTV con visión nocturna en accesos exteriores fuera de horario.',
+    'Danys': 'Revisar mantenimiento y protección del mobiliario y las zonas más afectadas.',
+    'Accident CC': 'Revisar señalización y estado del suelo en las zonas con más accidentes dentro del centro.',
+    'Accident Parking': 'Revisar señalización, iluminación y estado del pavimento del parking.'
+  };
+
   function computeKPIs() {
     var inc = (typeof incidencies !== 'undefined' && incidencies) ? incidencies : [];
     var rel = inc.filter(function (i) { return !EXCLUIR[i.categoria]; });
     var robosArr = rel.filter(function (i) { return i.categoria === 'Robatori'; });
     var robos = robosArr.length;
     var robosNoct = robosArr.filter(function (i) { return esNocturno(i.hora); }).length;
+    var danys = rel.filter(function (i) { return i.categoria === 'Danys'; }).length;
+    var accCC = rel.filter(function (i) { return i.categoria === 'Accident CC'; }).length;
+    var accParking = rel.filter(function (i) { return i.categoria === 'Accident Parking'; }).length;
+
+    var zonaConteo = {};
+    rel.forEach(function (i) {
+      var zona = detectarZona((i.resum || '') + ' ' + (i.descripcion || ''));
+      if (zona) zonaConteo[zona] = (zonaConteo[zona] || 0) + 1;
+    });
+    var zonaTop = null, zonaTopCount = 0;
+    Object.keys(zonaConteo).forEach(function (z) {
+      if (zonaConteo[z] > zonaTopCount) { zonaTop = z; zonaTopCount = zonaConteo[z]; }
+    });
+
+    var categorias = [
+      { nombre: 'Robatori', label: 'Robos', val: robos },
+      { nombre: 'Danys', label: 'Daños', val: danys },
+      { nombre: 'Accident CC', label: 'Accidentes en el centro', val: accCC },
+      { nombre: 'Accident Parking', label: 'Accidentes en el parking', val: accParking }
+    ];
+    var categoriaTop = categorias.reduce(function (a, b) { return b.val > a.val ? b : a; });
+
     return {
       total: rel.length,
       gravAlta: inc.filter(function (i) { return i.gravedad === 'Alta'; }).length,
       robos: robos,
-      danys: rel.filter(function (i) { return i.categoria === 'Danys'; }).length,
-      accCC: rel.filter(function (i) { return i.categoria === 'Accident CC'; }).length,
-      accParking: rel.filter(function (i) { return i.categoria === 'Accident Parking'; }).length,
+      danys: danys,
+      accCC: accCC,
+      accParking: accParking,
       robosNoct: robosNoct,
-      robosCom: robos - robosNoct
+      robosCom: robos - robosNoct,
+      zonaTop: zonaTop,
+      zonaTopCount: zonaTopCount,
+      categoriaTop: categoriaTop
     };
   }
 
@@ -50,6 +112,12 @@
   function bodyHTML(k) {
     var catMax = Math.max(k.danys, k.robos, k.accCC, k.accParking, 1);
     var ctxMax = Math.max(k.robosCom, k.robosNoct, 1);
+    var puntoCaliente = k.zonaTop
+      ? '<li style="margin-bottom:6px"><strong>Puntos calientes:</strong> la zona de <strong>' + k.zonaTop + '</strong> concentra el mayor número de incidencias detectadas por texto (' + k.zonaTopCount + '). Reforzar CCTV y rondas específicas ahí.</li>'
+      : '<li style="margin-bottom:6px"><strong>Puntos calientes:</strong> no se ha detectado ninguna zona repetida en el texto de las incidencias. Conviene registrar la ubicación de forma más sistemática (planta, zona, comercio) para poder identificar puntos calientes.</li>';
+    var categoriaMasFrecuente = k.categoriaTop.val > 0
+      ? '<li style="margin-bottom:6px"><strong>' + k.categoriaTop.label + ' (' + k.categoriaTop.val + '):</strong> es la categoría más frecuente del periodo. ' + (CONSEJO_CATEGORIA[k.categoriaTop.nombre] || '') + '</li>'
+      : '';
     return '' +
       '<div style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0">' +
         card('Total relevantes', k.total) + card('Gravedad alta', k.gravAlta) +
@@ -69,10 +137,10 @@
       '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px 18px">' +
         '<div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:10px">💡 Propuestas de mejora y prevención</div>' +
         '<ul style="margin:0;padding-left:20px;color:#374151;font-size:13px;line-height:1.7">' +
-          '<li style="margin-bottom:6px"><strong>Puntos calientes:</strong> la zona de <strong>Gimnasio / aparcabicis</strong> concentra el mayor número de incidentes (3). Reforzar CCTV y rondas específicas ahí.</li>' +
+          puntoCaliente +
           '<li style="margin-bottom:6px"><strong>Robos nocturnos en el exterior (' + k.robosNoct + '):</strong> con el centro cerrado, ocurren en zonas exteriores (aparcabicis, gimnasio). Priorizar CCTV con visión nocturna, iluminación y coordinación con Mossos/112.</li>' +
           '<li style="margin-bottom:6px"><strong>Robos/hurtos en horario comercial (' + k.robosCom + '):</strong> se producen dentro de tiendas y restauración durante la apertura. Reforzar vigilancia en sala y coordinación con el personal de los locales.</li>' +
-          '<li style="margin-bottom:6px"><strong>Daños (' + k.danys + '):</strong> categoría más frecuente. Revisar mantenimiento y protección del mobiliario/zonas más afectadas.</li>' +
+          categoriaMasFrecuente +
           '<li style="margin-bottom:6px"><strong>Calidad del registro:</strong> conviene separar tareas operativas nocturnas (retirada de protocolo, incidencias técnicas) de las incidencias de seguridad, y añadir <strong>hora de cierre</strong> y <strong>ubicación estructurada</strong>.</li>' +
         '</ul>' +
         '<div style="margin-top:10px;font-size:11px;color:#9ca3af;font-style:italic">Análisis orientativo basado en ' + k.total + ' incidencias. Al ser un volumen bajo, conviene validar la tendencia con varios meses de datos y contrastar con el responsable de seguridad.</div>' +
