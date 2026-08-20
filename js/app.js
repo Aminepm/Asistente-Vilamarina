@@ -365,6 +365,7 @@ function obrirDetall(id) {
         <div class="detail-item"><div class="detail-label">Categoría</div><div class="detail-value"><span class="badge badge-cat">${d.categoria}</span></div></div>
         <div class="detail-item"><div class="detail-label">Ubicación</div><div class="detail-value">${d.ubicacion}</div></div>
         <div class="detail-item"><div class="detail-label">Estado</div><div class="detail-value"><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></div></div>
+        ${d.enlace?`<div class="detail-item"><div class="detail-label">Informe original</div><div class="detail-value"><a href="${d.enlace}" target="_blank" rel="noopener">Abrir informe ↗</a></div></div>`:""}
       </div>
     </div>
     <div class="detail-section">
@@ -1381,8 +1382,7 @@ function mapearFilaSheet(f, i) {
 function verIncidencia(id) {
   var d = incidencies.find(function(i){ return String(i.id)===String(id); });
   if (!d) return;
-  if (d.enlace) { window.open(d.enlace, "_blank"); }
-  else { obrirDetall(d.id); }
+  obrirDetall(d.id);
 }
 
 async function cargarDesdeSheets() {
