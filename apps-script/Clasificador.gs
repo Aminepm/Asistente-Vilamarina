@@ -1105,6 +1105,71 @@ function reiniciarReclasificacionHistorico() {
   Logger.log('Progreso reiniciado. La próxima ejecución de reclasificarHistorico() empezará desde la primera fila.');
 }
 
+/* === REINTENTO: solo las filas que se quedaron "Sin clasificar" ===
+   A diferencia de reclasificarHistorico() (que recorre TODA la hoja fila
+   a fila y nunca vuelve atrás), esta función solo repasa las filas que
+   AHORA MISMO están en "Sin clasificar". Si Gemini responde con éxito,
+   la salida estructurada garantiza siempre una de las 6 categorías
+   válidas, así que "Sin clasificar" solo puede venir de que Gemini
+   fallara (por ejemplo, un 429 de cuota) durante el pase anterior — no
+   hace falta relanzar toda la hoja para intentarlo de nuevo. Como no
+   toca las filas ya bien clasificadas, no gasta cuota en vano y se
+   puede ejecutar varias veces seguidas sin llevar la cuenta de por
+   dónde se quedó: cada ejecución ve, sencillamente, menos filas "Sin
+   clasificar" que la anterior.
+
+   Ejecútala manualmente (▶ Ejecutar -> reintentarSinClasificar) las
+   veces que haga falta hasta que el log diga que no queda ninguna. */
+function reintentarSinClasificar() {
+  var inicioEjecucion = new Date().getTime();
+  var hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+  var datos = hoja.getDataRange().getValues();
+  var inicio = 0;
+  if (datos.length > 0 && !(datos[0][0] instanceof Date)) {
+    inicio = 1; // fila 0 es cabecera
+  }
+
+  var revisadas = 0, corregidas = 0, siguenSinClasificar = 0;
+  var agotado = false;
+  for (var i = inicio; i < datos.length; i++) {
+    if (new Date().getTime() - inicioEjecucion > TIEMPO_LIMITE_MS) {
+      agotado = true;
+      break;
+    }
+    var f = datos[i];
+    // Columnas (según guardarIncidencia): 0 marca, 1 fecha, 2 hora,
+    // 3 gravedad, 4 categoria, 5 resumen, 6 estado, 7 original, 8 enlace.
+    if (f[4] !== CATEGORIA_SIN_CLASIFICAR) continue;
+
+    var textoOriginal = f[7] || f[5];
+    if (!textoOriginal) continue;
+    revisadas++;
+
+    var textoCorregido = corregirOrtografia(textoOriginal);
+    var resultado = clasificarIncidencia(textoCorregido);
+
+    if (resultado.categoria !== CATEGORIA_SIN_CLASIFICAR) {
+      hoja.getRange(i + 1, 5).setValue(resultado.categoria); // columna E
+      hoja.getRange(i + 1, 4).setValue(resultado.gravedad);  // columna D
+      corregidas++;
+      Logger.log('Fila ' + (i + 1) + ': "Sin clasificar" -> "' + resultado.categoria + '/' + resultado.gravedad + '"');
+    } else {
+      siguenSinClasificar++;
+    }
+    if (textoCorregido !== textoOriginal) {
+      hoja.getRange(i + 1, 6).setValue(textoCorregido.slice(0, 250));  // columna F (resumen)
+      hoja.getRange(i + 1, 8).setValue(textoCorregido.slice(0, 1000)); // columna H (original)
+    }
+    Utilities.sleep(300);
+  }
+
+  Logger.log('Reintento de "Sin clasificar": ' + revisadas + ' revisadas, ' + corregidas +
+    ' corregidas, ' + siguenSinClasificar + ' siguen sin clasificar.' +
+    (agotado
+      ? ' Quedan filas por revisar (se acabó el tiempo de esta ejecución): vuelve a ejecutar reintentarSinClasificar() para continuar.'
+      : ' Recorrido completo de la hoja: no queda ninguna fila pendiente de este repaso.'));
+}
+
 /* === API WEB: devuelve las incidencias de la hoja en JSON ========
    Se publica como Web App (Implementar -> Nueva implementación -> Aplicación web).
    Soporta JSONP mediante el parámetro ?callback= para lectura desde el panel. */
