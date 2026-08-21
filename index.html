@@ -39,9 +39,9 @@
 <svg viewbox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"></line><line x1="5" x2="19" y1="12" y2="12"></line></svg>
           Nueva incidencia
         </button>
-<button class="btn btn-primary" onclick="exportarCSV()">
+<button class="btn btn-primary" onclick="exportarPDF()">
 <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
-          Exportar Excel
+          Exportar PDF
         </button>
 <button class="btn btn-primary" id="btn-actualizar" onclick="actualizarAhora()">
 <svg viewbox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
@@ -121,6 +121,10 @@
 <button class="btn btn-outline" onclick="descarregarPlantillaPDF()">
 <svg viewbox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" x2="8" y1="13" y2="13"></line><line x1="16" x2="8" y1="17" y2="17"></line></svg>
           Descargar plantilla PDF
+        </button>
+<button class="btn btn-primary" onclick="exportarAfectatsPDF()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+          Exportar PDF
         </button>
 <button class="btn btn-accent" onclick="obrirModalAfectat()">
 <svg viewbox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"></line><line x1="5" x2="19" y1="12" y2="12"></line></svg>
@@ -229,6 +233,10 @@
 <p>Averías, avisos técnicos y tareas operativas — independientes del registro de incidencias de seguridad</p>
 </div>
 <div class="header-actions">
+<button class="btn btn-primary" onclick="exportarMantenimientoPDF()">
+<svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+          Exportar PDF
+        </button>
 <button class="btn btn-accent" onclick="obrirModalNova('Mantenimiento')">
 <svg viewbox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"></line><line x1="5" x2="19" y1="12" y2="12"></line></svg>
           Nuevo aviso de mantenimiento
@@ -494,5 +502,5 @@
 
 <script src="js/vendor/logo-vilamarina.js"></script>
 <script src="js/kpis.js?v=4"></script>
-<script src="js/app.js?v=21"></script></body>
+<script src="js/app.js?v=22"></script></body>
 </html>
