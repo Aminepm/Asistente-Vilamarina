@@ -627,6 +627,12 @@ function nombreMesCorto(m) {
   var partes = m.split("-");
   return INF_MESES_CORTOS[parseInt(partes[1],10)-1] + " " + partes[0].slice(2);
 }
+// Etiqueta corta "día/mes" para la gráfica cuando se agrupa por días (rango
+// dentro de un mismo mes, como MTD) en vez de por meses.
+function diaCorto(f) {
+  var partes = f.split("-");
+  return partes[2] + "/" + partes[1];
+}
 
 var INF_FECHAS_INICIALIZADAS = false;
 function inicializarFechasInformes() {
@@ -738,8 +744,9 @@ function trazoSuave(pts) {
   return d;
 }
 
-function construirGraficoLineal(filasMes) {
+function construirGraficoLineal(filasMes, esDiario) {
   if (!filasMes.length) return '<div style="color:#7A8FA6;font-size:13px;padding:12px">No hay incidencias en el rango seleccionado.</div>';
+  var etiquetar = esDiario ? diaCorto : nombreMesCorto;
   var width = 760, height = 200, padding = { left: 26, right: 16, top: 16, bottom: 28 };
   var plotW = width - padding.left - padding.right, plotH = height - padding.top - padding.bottom;
   var maxV = Math.max.apply(null, filasMes.map(function(f){ return f.total; }).concat([1]));
@@ -753,7 +760,7 @@ function construirGraficoLineal(filasMes) {
   var etiquetaCada = Math.ceil(filasMes.length/10) || 1;
   filasMes.forEach(function(f,i){
     if (i % etiquetaCada === 0 || i === filasMes.length-1) {
-      svg += '<text x="'+xAt(i)+'" y="'+(height-8)+'" font-size="10" fill="#9AA6B2" text-anchor="middle">'+nombreMesCorto(f.mes)+'</text>';
+      svg += '<text x="'+xAt(i)+'" y="'+(height-8)+'" font-size="10" fill="#9AA6B2" text-anchor="middle">'+etiquetar(f.mes)+'</text>';
     }
   });
   svg += '</svg>';
@@ -802,7 +809,8 @@ function generarImagenGraficoCircularCanvas(datos, cssW, cssH) {
   return canvas;
 }
 
-function generarImagenGraficoLinealCanvas(filasMes, cssW, cssH) {
+function generarImagenGraficoLinealCanvas(filasMes, cssW, cssH, esDiario) {
+  var etiquetar = esDiario ? diaCorto : nombreMesCorto;
   var dpr = 3;
   var canvas = document.createElement("canvas");
   canvas.width = cssW*dpr; canvas.height = cssH*dpr;
@@ -828,7 +836,7 @@ function generarImagenGraficoLinealCanvas(filasMes, cssW, cssH) {
   ctx.fillStyle = "#9AA6B2"; ctx.textAlign = "center"; ctx.font = "8px Helvetica, Arial, sans-serif";
   filasMes.forEach(function(f,i){
     if (i % etiquetaCada !== 0 && i !== filasMes.length-1) return;
-    ctx.fillText(nombreMesCorto(f.mes), xAt(i), cssH-6);
+    ctx.fillText(etiquetar(f.mes), xAt(i), cssH-6);
   });
   return canvas;
 }
@@ -854,6 +862,47 @@ function resumenMensualCompleto(lista) {
   return Object.keys(porMes).sort().map(function(m){ return porMes[m]; });
 }
 
+// Igual que resumenMensualCompleto() pero agrupado por día en vez de por
+// mes, para cuando el rango cae dentro de un único mes (p. ej. MTD): un
+// solo punto por mes no sirve para ver una tendencia. Rellena TODOS los
+// días entre desde/hasta (con total 0 si no hubo incidencias ese día), no
+// solo los días con datos, para que el eje X represente el calendario real
+// sin huecos que distorsionen la gráfica.
+function resumenDiarioCompleto(lista, desde, hasta) {
+  var porDia = {};
+  lista.forEach(function(d){
+    var f = d.fecha || "";
+    if (!f) return;
+    if (!porDia[f]) {
+      porDia[f] = { total:0, criticas:0, altas:0, medias:0, bajas:0, abiertas:0, cerradas:0, categorias:{} };
+      INF_CATEGORIAS.forEach(function(c){ porDia[f].categorias[c] = 0; });
+    }
+    var fila = porDia[f];
+    fila.total++;
+    if (d.gravedad==="Crítica") fila.criticas++;
+    else if (d.gravedad==="Alta") fila.altas++;
+    else if (d.gravedad==="Media") fila.medias++;
+    else if (d.gravedad==="Baja") fila.bajas++;
+    if (d.estat==="Obert") fila.abiertas++; else fila.cerradas++;
+    if (fila.categorias[d.categoria] !== undefined) fila.categorias[d.categoria]++;
+  });
+  if (!desde || !hasta) return Object.keys(porDia).sort().map(function(f){ return Object.assign({ mes: f }, porDia[f]); });
+  function filaVacia() {
+    var v = { total:0, criticas:0, altas:0, medias:0, bajas:0, abiertas:0, cerradas:0, categorias:{} };
+    INF_CATEGORIAS.forEach(function(c){ v.categorias[c] = 0; });
+    return v;
+  }
+  var filas = [];
+  var actual = new Date(desde + "T00:00:00");
+  var fin = new Date(hasta + "T00:00:00");
+  while (actual <= fin) {
+    var clave = actual.toISOString().slice(0,10);
+    filas.push(Object.assign({ mes: clave }, porDia[clave] || filaVacia()));
+    actual.setDate(actual.getDate()+1);
+  }
+  return filas;
+}
+
 function renderInformes() {
   inicializarFechasInformes();
   var rango = getRangoInformes();
@@ -861,8 +910,12 @@ function renderInformes() {
   var grafico = document.getElementById("inf-grafico");
   if (grafico) grafico.innerHTML = construirGraficoCircular(datosGraficoTema(lista));
   var filasAsc = resumenMensualCompleto(lista);
+  // Si el rango cae dentro de un único mes (como MTD), un solo punto
+  // mensual no sirve para ver tendencia: se agrupa por días en su lugar.
+  var esRangoDiario = !!(rango.desde && rango.hasta && rango.desde.slice(0,7) === rango.hasta.slice(0,7));
+  var filasGrafico = esRangoDiario ? resumenDiarioCompleto(lista, rango.desde, rango.hasta) : filasAsc;
   var graficoLineal = document.getElementById("inf-grafico-lineal");
-  if (graficoLineal) graficoLineal.innerHTML = construirGraficoLineal(filasAsc);
+  if (graficoLineal) graficoLineal.innerHTML = construirGraficoLineal(filasGrafico, esRangoDiario);
   var actualizado = document.getElementById("inf-lineal-actualizado");
   if (actualizado) actualizado.textContent = "Última actualización " + new Date().toLocaleTimeString("es-ES");
   var filas = filasAsc.slice().reverse();
@@ -896,6 +949,11 @@ async function generarPDFInforme(lista, rango, sufijo) {
   var temas = datosGraficoTema(lista);
   var totalTemas = temas.reduce(function(s,d){ return s+d.value; }, 0);
   var filasMes = resumenMensualCompleto(lista);
+  // Igual que en la web: si el rango cae dentro de un único mes (MTD), la
+  // gráfica de evolución se agrupa por días en vez de por meses -- el
+  // "Resumen mensual" de la tabla de abajo sigue siendo mensual.
+  var esRangoDiario = !!(rango.desde && rango.hasta && rango.desde.slice(0,7) === rango.hasta.slice(0,7));
+  var filasGrafico = esRangoDiario ? resumenDiarioCompleto(lista, rango.desde, rango.hasta) : filasMes;
   var criticas = lista.filter(function(d){ return d.gravedad==="Crítica"; }).length;
   var altas = lista.filter(function(d){ return d.gravedad==="Alta"; }).length;
   var abiertas = lista.filter(function(d){ return d.estat==="Obert"; }).length;
@@ -936,7 +994,7 @@ async function generarPDFInforme(lista, rango, sufijo) {
   var pieW = 62, pieH = 62, lineW = 110, lineH = 57;
   var pieCanvas = generarImagenGraficoCircularCanvas(temas, 240, 240);
   doc.addImage(pieCanvas.toDataURL("image/png"), "PNG", margenIzq, y + 4, pieW, pieH);
-  var lineCanvas = generarImagenGraficoLinealCanvas(filasMes, 460, 240);
+  var lineCanvas = generarImagenGraficoLinealCanvas(filasGrafico, 460, 240, esRangoDiario);
   doc.addImage(lineCanvas.toDataURL("image/png"), "PNG", margenIzq + 70, y + 4, lineW, lineH);
   y = y + 4 + Math.max(pieH, lineH) + 8;
 
