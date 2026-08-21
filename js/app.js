@@ -65,8 +65,20 @@ function canviarVista(vista, btn) {
   if (vista === 'mantenimiento') renderMantenimiento();
 }
 
+// Las incidencias de la Sheet traen la fecha como "DD/MM/YYYY" (así la
+// formatea el Apps Script), mientras que las creadas a mano en la web usan
+// "YYYY-MM-DD" (el formato nativo de <input type="date">). Esta función
+// normaliza cualquiera de los dos a la clave "YYYY-MM" usada por el
+// filtro de meses.
+function mesDeFecha(fecha) {
+  var f = fecha || "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return f.slice(0,7);
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(f)) { var p = f.split("/"); return p[2] + "-" + p[1]; }
+  return "";
+}
+
 function omplirFiltresMesos() {
-  const mesos = [...new Set(incidencies.filter(i => !esCategoriaOperativa(i.categoria)).map(i => i.fecha.slice(0,7)))].sort().reverse();
+  const mesos = [...new Set(incidencies.filter(i => !esCategoriaOperativa(i.categoria)).map(i => mesDeFecha(i.fecha)).filter(Boolean))].sort().reverse();
   const sel = document.getElementById("f-mes");
   sel.innerHTML = '<option value="">Todos los meses</option>';
   const noms = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -86,7 +98,7 @@ function filtrar() {
     if (grav && d.gravedad !== grav) return false;
     if (cat && d.categoria !== cat) return false;
     if (est && d.estat !== est) return false;
-    if (mes && !((d.fecha||"").startsWith(mes) || (d.fecha||"").split("/").reverse().join("-").startsWith(mes))) return false;
+    if (mes && mesDeFecha(d.fecha) !== mes) return false;
     if (buscar){ var hay=((d.resum||"")+" "+(d.descripcion||"")+" "+(d.ubicacion||"")+" "+(d.categoria||"")).toLowerCase(); if(hay.indexOf(buscar)===-1) return false; }
     return true;
   });
@@ -110,6 +122,17 @@ function ordenarPor(campo) {
   if (ordenTabla.campo === campo) { ordenTabla.direccion = -ordenTabla.direccion; }
   else { ordenTabla.campo = campo; ordenTabla.direccion = 1; }
   renderTabla();
+}
+
+// Atajo para el seguimiento de incidencias: filtra la tabla de Incidencias
+// para mostrar solo las que siguen abiertas. Se llama desde el botón "Solo
+// abiertas" y desde la propia métrica "Abiertas" del panel.
+function verSoloAbiertas() {
+  var sel = document.getElementById("f-estat");
+  if (sel) sel.value = "Obert";
+  renderTabla();
+  var panel = document.querySelector("#view-incidencies .panel");
+  if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function actualizarIndicadoresOrden() {
@@ -1568,6 +1591,7 @@ function mostrarCacheIncidencias() {
     incidencies = incidencies.filter(function (x) { return x.origen !== "sheets"; });
     var nuevas = datos.filas.map(mapearFilaSheet);
     incidencies = nuevas.concat(incidencies);
+    omplirFiltresMesos();
     if (typeof renderTabla === "function") renderTabla();
     if (typeof actualitzarMetriques === "function") actualitzarMetriques();
     if (typeof renderMantenimiento === "function") renderMantenimiento();
@@ -1588,6 +1612,7 @@ async function cargarDesdeSheets() {
           incidencies = incidencies.filter(function (x) { return x.origen !== "sheets"; });
           var nuevas = filas.map(mapearFilaSheet);
           incidencies = nuevas.concat(incidencies);
+          omplirFiltresMesos();
           if (typeof renderTabla === "function") renderTabla();
           if (typeof actualitzarMetriques === "function") actualitzarMetriques();
           if (typeof renderMantenimiento === "function") renderMantenimiento();
