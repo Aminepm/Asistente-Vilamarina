@@ -53,13 +53,17 @@
           Revisar sin clasificar
           <span id="btn-revisar-count" class="badge badge-cat" style="margin-left:2px">0</span>
         </button>
+<button class="btn btn-outline" onclick="verSoloAbiertas()">
+<svg viewbox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+          Solo abiertas
+        </button>
 </div>
 </div>
 <div class="metrics">
 <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="m-total">0</div></div>
 <div class="metric"><div class="metric-label">Críticas</div><div class="metric-value red" id="m-critica">0</div></div>
 <div class="metric"><div class="metric-label">Altes</div><div class="metric-value amber" id="m-alta">0</div></div>
-<div class="metric"><div class="metric-label">Abiertas</div><div class="metric-value blue" id="m-obertes">0</div></div>
+<div class="metric" style="cursor:pointer" onclick="verSoloAbiertas()" title="Ver solo las incidencias abiertas"><div class="metric-label">Abiertas</div><div class="metric-value blue" id="m-obertes">0</div></div>
 <div class="metric"><div class="metric-label">Este mes</div><div class="metric-value green" id="m-mes">0</div></div>
 </div>
 <div class="panel">
@@ -513,5 +517,5 @@
 
 <script src="js/vendor/logo-vilamarina.js"></script>
 <script src="js/kpis.js?v=4"></script>
-<script src="js/app.js?v=24"></script></body>
+<script src="js/app.js?v=25"></script></body>
 </html>
