@@ -1,6 +1,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1A1A2E; min-height: 100vh; background: linear-gradient(rgba(244,245,247,.82), rgba(244,245,247,.82)), url('../img/fondo-vilamarina.jpg') center / cover no-repeat fixed; }
+.inf-tooltip { display: none; position: fixed; z-index: 300; background: #0F1B2D; color: #fff; font-size: 12px; padding: 6px 10px; border-radius: 6px; pointer-events: none; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
 .topbar { background: #0F1B2D; padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
 .topbar-left { display: flex; align-items: center; gap: 12px; }
 .topbar-logo { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }

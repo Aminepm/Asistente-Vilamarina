@@ -8,6 +8,7 @@
 <link href="img/logo-vilamarina.png" rel="icon" type="image/png"/>
 <link href="css/style.css" rel="stylesheet"/></head>
 <body>
+<div id="inf-tooltip" class="inf-tooltip"></div>
 <div class="topbar">
 <div class="topbar-left">
 <div class="topbar-logo">
@@ -422,6 +423,16 @@
 <div class="modal-body" id="revisar-body"></div>
 </div>
 </div>
+<!-- MODAL INCIDENCIAS DE UNA CATEGORÍA (desde el gráfico de Informes) -->
+<div class="modal-overlay" id="modal-categoria-informe" onclick="tancarModalFons(event,'modal-categoria-informe')">
+<div class="modal" style="width:560px">
+<div class="modal-header">
+<h2 id="categoria-informe-titulo">Incidencias</h2>
+<button class="modal-close" onclick="tancarModal('modal-categoria-informe')">✕</button>
+</div>
+<div class="modal-body" id="categoria-informe-body"></div>
+</div>
+</div>
 <!-- MODAL NOU AFECTAT -->
 <div class="modal-overlay" id="modal-afectat" onclick="tancarModalFons(event,'modal-afectat')">
 <div class="modal">
@@ -502,5 +513,5 @@
 
 <script src="js/vendor/logo-vilamarina.js"></script>
 <script src="js/kpis.js?v=4"></script>
-<script src="js/app.js?v=23"></script></body>
+<script src="js/app.js?v=24"></script></body>
 </html>

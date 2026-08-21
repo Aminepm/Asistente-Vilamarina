@@ -705,16 +705,17 @@ function construirGraficoCircular(datos) {
     if (!d.value) return;
     var frac = d.value/total;
     var dash = frac*circ;
+    var onclick = 'mostrarIncidenciasCategoria(\''+d.label+'\')';
     svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+radius+'" fill="none" stroke="'+d.color+'" stroke-width="'+sw+'" ' +
       'stroke-dasharray="'+dash.toFixed(2)+' '+(circ-dash).toFixed(2)+'" stroke-dashoffset="'+(-acumulado).toFixed(2)+'" ' +
-      'transform="rotate(-90 '+cx+' '+cy+')"></circle>';
+      'transform="rotate(-90 '+cx+' '+cy+')" style="cursor:pointer" onclick="'+onclick+'"><title>'+catEs(d.label)+': '+d.value+'</title></circle>';
     var pct = Math.round(frac*100);
     if (pct >= 6) {
       var midFrac = (acumulado/circ) + frac/2;
       var ang = (-90 + midFrac*360) * Math.PI/180;
       var lx = cx + radius*Math.cos(ang);
       var ly = cy + radius*Math.sin(ang);
-      etiquetas += '<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="700" fill="#fff">'+pct+'%</text>';
+      etiquetas += '<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="700" fill="#fff" style="cursor:pointer" onclick="'+onclick+'">'+pct+'%</text>';
     }
     acumulado += dash;
   });
@@ -724,7 +725,7 @@ function construirGraficoCircular(datos) {
   svg += '</svg>';
   var leyenda = '<div style="display:flex;flex-direction:column;gap:8px;min-width:160px">' + datos.filter(function(d){ return d.value>0; }).map(function(d){
     var pct = Math.round(d.value/total*100);
-    return '<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#2C3E50">' +
+    return '<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#2C3E50;cursor:pointer" onclick="mostrarIncidenciasCategoria(\''+d.label+'\')">' +
       '<span style="width:10px;height:10px;border-radius:50%;background:'+d.color+';display:inline-block;flex-shrink:0"></span>' +
       '<span>'+catEs(d.label)+'</span>' +
       '<span style="margin-left:auto;color:#7A8FA6;font-size:12px">'+d.value+' · '+pct+'%</span></div>';
@@ -734,14 +735,22 @@ function construirGraficoCircular(datos) {
 
 var INF_COLOR_LINEA = "#14b8a6";
 
-function trazoSuave(pts) {
-  var d = 'M'+pts[0].x+','+pts[0].y;
-  for (var i=1; i<pts.length; i++) {
-    var xc = (pts[i-1].x+pts[i].x)/2, yc = (pts[i-1].y+pts[i].y)/2;
-    d += ' Q'+pts[i-1].x+','+pts[i-1].y+' '+xc+','+yc;
-  }
-  if (pts.length>1) d += ' L'+pts[pts.length-1].x+','+pts[pts.length-1].y;
-  return d;
+// Muestra/oculta el tooltip flotante de la gráfica de barras de Informes.
+// Se llama desde onmouseover/onmousemove/onmouseout puestos directamente en
+// cada <rect> generado por construirGraficoLineal() (onmouseenter/leave NO
+// están garantizados como atributos inline en SVG, a diferencia de HTML;
+// onmouseover/onmouseout sí lo están desde SVG 1.1).
+function mostrarTooltipInforme(ev, etiqueta, total) {
+  var tip = document.getElementById("inf-tooltip");
+  if (!tip) return;
+  tip.textContent = etiqueta + ": " + total + (total===1?" incidencia":" incidencias");
+  tip.style.left = (ev.clientX + 12) + "px";
+  tip.style.top = (ev.clientY - 10) + "px";
+  tip.style.display = "block";
+}
+function ocultarTooltipInforme() {
+  var tip = document.getElementById("inf-tooltip");
+  if (tip) tip.style.display = "none";
 }
 
 function construirGraficoLineal(filasMes, esDiario) {
@@ -750,17 +759,25 @@ function construirGraficoLineal(filasMes, esDiario) {
   var width = 760, height = 200, padding = { left: 26, right: 16, top: 16, bottom: 28 };
   var plotW = width - padding.left - padding.right, plotH = height - padding.top - padding.bottom;
   var maxV = Math.max.apply(null, filasMes.map(function(f){ return f.total; }).concat([1]));
-  var stepX = filasMes.length > 1 ? plotW/(filasMes.length-1) : 0;
-  function xAt(i) { return padding.left + (filasMes.length>1 ? stepX*i : plotW/2); }
-  function yAt(v) { return padding.top + plotH - (maxV>0 ? (v/maxV)*plotH : 0); }
-  var pts = filasMes.map(function(f,i){ return { x: xAt(i), y: yAt(f.total) }; });
+  var n = filasMes.length;
+  var gap = n > 45 ? 1 : (n > 20 ? 2 : 4);
+  var barW = Math.max(1, (plotW - gap*(n-1)) / n);
+  function xAt(i) { return padding.left + i*(barW+gap); }
+  function hAt(v) { return maxV>0 ? (v/maxV)*plotH : 0; }
+  var etiquetaCada = Math.ceil(n/10) || 1;
   var svg = '<svg viewBox="0 0 '+width+' '+height+'" style="width:100%;height:auto;max-width:100%">';
   svg += '<text x="8" y="'+(padding.top+plotH/2)+'" font-size="10" fill="#9AA6B2" text-anchor="middle" transform="rotate(-90 8 '+(padding.top+plotH/2)+')">Incidencias</text>';
-  svg += '<path d="'+trazoSuave(pts)+'" fill="none" stroke="'+INF_COLOR_LINEA+'" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"></path>';
-  var etiquetaCada = Math.ceil(filasMes.length/10) || 1;
   filasMes.forEach(function(f,i){
-    if (i % etiquetaCada === 0 || i === filasMes.length-1) {
-      svg += '<text x="'+xAt(i)+'" y="'+(height-8)+'" font-size="10" fill="#9AA6B2" text-anchor="middle">'+etiquetar(f.mes)+'</text>';
+    var h = Math.max(hAt(f.total), f.total>0 ? 1.5 : 0);
+    var x = xAt(i), y = padding.top + plotH - h;
+    var etiqueta = etiquetar(f.mes).replace(/'/g, "&#39;");
+    svg += '<rect x="'+x.toFixed(2)+'" y="'+y.toFixed(2)+'" width="'+barW.toFixed(2)+'" height="'+h.toFixed(2)+'" rx="1.5" ' +
+      'fill="'+INF_COLOR_LINEA+'" style="cursor:pointer;transition:opacity .1s" ' +
+      'onmouseover="this.style.opacity=0.65;mostrarTooltipInforme(event,\''+etiqueta+'\','+f.total+')" ' +
+      'onmousemove="mostrarTooltipInforme(event,\''+etiqueta+'\','+f.total+')" ' +
+      'onmouseout="this.style.opacity=1;ocultarTooltipInforme()"></rect>';
+    if (i % etiquetaCada === 0 || i === n-1) {
+      svg += '<text x="'+(x+barW/2).toFixed(2)+'" y="'+(height-8)+'" font-size="10" fill="#9AA6B2" text-anchor="middle">'+etiqueta+'</text>';
     }
   });
   svg += '</svg>';
@@ -820,23 +837,21 @@ function generarImagenGraficoLinealCanvas(filasMes, cssW, cssH, esDiario) {
   var plotW = cssW-padding.left-padding.right, plotH = cssH-padding.top-padding.bottom;
   if (!filasMes.length) return canvas;
   var maxV = Math.max.apply(null, filasMes.map(function(f){ return f.total; }).concat([1]));
-  var stepX = filasMes.length > 1 ? plotW/(filasMes.length-1) : 0;
-  function xAt(i) { return padding.left + (filasMes.length>1 ? stepX*i : plotW/2); }
-  function yAt(v) { return padding.top + plotH - (maxV>0 ? (v/maxV)*plotH : 0); }
-  var pts = filasMes.map(function(f,i){ return { x: xAt(i), y: yAt(f.total) }; });
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (var i=1; i<pts.length; i++) {
-    var xc = (pts[i-1].x+pts[i].x)/2, yc = (pts[i-1].y+pts[i].y)/2;
-    ctx.quadraticCurveTo(pts[i-1].x, pts[i-1].y, xc, yc);
-  }
-  if (pts.length>1) ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
-  ctx.strokeStyle = INF_COLOR_LINEA; ctx.lineWidth = 2.4; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
-  var etiquetaCada = Math.ceil(filasMes.length/7) || 1;
+  var n = filasMes.length;
+  var gap = n > 45 ? 0.5 : (n > 20 ? 1 : 2);
+  var barW = Math.max(0.5, (plotW - gap*(n-1)) / n);
+  function xAt(i) { return padding.left + i*(barW+gap); }
+  function hAt(v) { return maxV>0 ? (v/maxV)*plotH : 0; }
+  ctx.fillStyle = INF_COLOR_LINEA;
+  filasMes.forEach(function(f,i){
+    var h = Math.max(hAt(f.total), f.total>0 ? 1 : 0);
+    ctx.fillRect(xAt(i), padding.top+plotH-h, barW, h);
+  });
+  var etiquetaCada = Math.ceil(n/7) || 1;
   ctx.fillStyle = "#9AA6B2"; ctx.textAlign = "center"; ctx.font = "8px Helvetica, Arial, sans-serif";
   filasMes.forEach(function(f,i){
-    if (i % etiquetaCada !== 0 && i !== filasMes.length-1) return;
-    ctx.fillText(etiquetar(f.mes), xAt(i), cssH-6);
+    if (i % etiquetaCada !== 0 && i !== n-1) return;
+    ctx.fillText(etiquetar(f.mes), xAt(i)+barW/2, cssH-6);
   });
   return canvas;
 }
@@ -901,6 +916,33 @@ function resumenDiarioCompleto(lista, desde, hasta) {
     actual.setDate(actual.getDate()+1);
   }
   return filas;
+}
+
+// Abre un modal con las incidencias de una categoría concreta dentro del
+// rango de fechas actualmente seleccionado en Informes. Se llama al hacer
+// clic en un porcentaje/segmento del gráfico circular o en su leyenda.
+function mostrarIncidenciasCategoria(categoria) {
+  var rango = getRangoInformes();
+  var lista = incidenciesEnRango(rango.desde, rango.hasta)
+    .filter(function(d){ return d.categoria === categoria; })
+    .sort(function(a,b){ return (b.fecha+b.hora).localeCompare(a.fecha+a.hora); });
+  var titulo = document.getElementById("categoria-informe-titulo");
+  if (titulo) titulo.textContent = catEs(categoria) + " (" + lista.length + ")";
+  var body = document.getElementById("categoria-informe-body");
+  if (body) {
+    body.innerHTML = lista.length ? lista.map(function(d){
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F0F2F5;cursor:pointer" ' +
+        'onclick="tancarModal(\'modal-categoria-informe\');obrirDetall(\''+d.id+'\')">' +
+        '<span class="badge '+badgeGravClass(d.gravedad)+'" style="flex-shrink:0">'+badgeGravLabel(d.gravedad)+'</span>' +
+        '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:12px;color:#7A8FA6">'+formatData(d.fecha)+' · '+d.hora+'h · '+(d.ubicacion||"")+'</div>' +
+        '<div style="font-size:13px;color:#2C3E50;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(d.resum||d.descripcion||"")+'</div>' +
+        '</div>' +
+        '<span class="badge '+(d.estat==="Obert"?"badge-obert":"badge-tancat")+'" style="flex-shrink:0">'+estadoEs(d.estat)+'</span>' +
+        '</div>';
+    }).join("") : '<div style="color:#7A8FA6;font-size:13px;padding:12px">No hay incidencias de esta categoría en el rango seleccionado.</div>';
+  }
+  document.getElementById("modal-categoria-informe").classList.add("open");
 }
 
 function renderInformes() {
