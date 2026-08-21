@@ -95,11 +95,41 @@
     };
   }
 
-  function card(label, val) {
-    return '<div style="flex:1;min-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.04)">' +
+  function card(label, val, onclick) {
+    var clickAttr = onclick ? ' onclick="' + onclick + '" style="flex:1;min-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer"' :
+      ' style="flex:1;min-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.04)"';
+    return '<div' + clickAttr + '>' +
       '<div style="font-size:11px;letter-spacing:.05em;color:#6b7280;text-transform:uppercase">' + label + '</div>' +
       '<div style="font-size:28px;font-weight:700;color:#111827;margin-top:4px">' + val + '</div></div>';
   }
+
+  // Devuelve la lista de incidencias detrás de cada tarjeta de KPI,
+  // usando exactamente el mismo filtro que computeKPIs(), y abre el modal
+  // genérico de listado que expone app.js (window.mostrarListadoIncidenciasModal).
+  function verListaKPI(tipo) {
+    var inc = (typeof incidencies !== 'undefined' && incidencies) ? incidencies : [];
+    var rel = inc.filter(function (i) { return !EXCLUIR[i.categoria]; });
+    var titulos = {
+      total: 'Total relevantes',
+      gravAlta: 'Gravedad alta',
+      robos: 'Robos',
+      danys: 'Daños',
+      accCC: 'Accidentes en el centro',
+      accParking: 'Accidentes en el parking'
+    };
+    var listas = {
+      total: rel,
+      gravAlta: inc.filter(function (i) { return i.gravedad === 'Alta'; }),
+      robos: rel.filter(function (i) { return i.categoria === 'Robatori'; }),
+      danys: rel.filter(function (i) { return i.categoria === 'Danys'; }),
+      accCC: rel.filter(function (i) { return i.categoria === 'Accident CC'; }),
+      accParking: rel.filter(function (i) { return i.categoria === 'Accident Parking'; })
+    };
+    if (typeof window.mostrarListadoIncidenciasModal === 'function') {
+      window.mostrarListadoIncidenciasModal(titulos[tipo] || 'Incidencias', listas[tipo] || []);
+    }
+  }
+  window.verListaKPI = verListaKPI;
 
   function bar(label, val, max, color) {
     var w = max > 0 ? Math.round(val / max * 100) : 0;
@@ -120,8 +150,8 @@
       : '';
     return '' +
       '<div style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0">' +
-        card('Total relevantes', k.total) + card('Gravedad alta', k.gravAlta) +
-        card('Robos', k.robos) + card('Daños', k.danys) + card('Accid. CC', k.accCC) + card('Accid. Parking', k.accParking) +
+        card('Total relevantes', k.total, "verListaKPI('total')") + card('Gravedad alta', k.gravAlta, "verListaKPI('gravAlta')") +
+        card('Robos', k.robos, "verListaKPI('robos')") + card('Daños', k.danys, "verListaKPI('danys')") + card('Accid. CC', k.accCC, "verListaKPI('accCC')") + card('Accid. Parking', k.accParking, "verListaKPI('accParking')") +
       '</div>' +
       '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">' +
         '<div style="flex:1;min-width:240px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px">' +
