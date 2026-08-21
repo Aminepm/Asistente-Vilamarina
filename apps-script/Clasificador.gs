@@ -933,7 +933,10 @@ function procesarReportes() {
       var msg = arr[mi];
       if (!msg.isUnread()) continue;
       var html = msg.getBody();
-      var um = html.match(/https:\/\/serviap\.cat\/_URL\/app4000\.asp\?hash=[^"\x27\s<>]+/);
+      // El número de página del enlace ha cambiado alguna vez (de app4000.asp
+      // a app4500.asp mismo dominio serviap.cat), así que se acepta
+      // cualquier número en vez de fijar uno solo, por si vuelve a cambiar.
+      var um = html.match(/https:\/\/serviap\.cat\/_URL\/app\d+\.asp\?hash=[^"\x27\s<>]+/);
       if (!um) { continue; }
       var url = um[0];
       var texto = extraerReporte(url);
