@@ -1014,6 +1014,7 @@ function guardarIncidencia(inc) {
     inc.original,
     inc.enlace || ''
   ]);
+  invalidarCacheListado();
 }
 
 /* === LIMPIEZA ÚNICA: reclasificar filas ya guardadas =============
@@ -1108,6 +1109,7 @@ function reclasificarHistorico() {
   } else {
     Logger.log('Reclasificación histórica completa: no quedan más filas.');
   }
+  invalidarCacheListado();
 }
 
 // Ejecútala una vez si quieres que reclasificarHistorico() vuelva a
@@ -1180,6 +1182,7 @@ function reintentarSinClasificar() {
     (agotado
       ? ' Quedan filas por revisar (se acabó el tiempo de esta ejecución): vuelve a ejecutar reintentarSinClasificar() para continuar.'
       : ' Recorrido completo de la hoja: no queda ninguna fila pendiente de este repaso.'));
+  invalidarCacheListado();
 }
 
 /* === API WEB: devuelve las incidencias de la hoja en JSON ========
@@ -1220,6 +1223,7 @@ function manejarGuardarCampo(e) {
     var hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
     hoja.getRange(fila, col).setValue(valor);
     resultado = { ok: true };
+    invalidarCacheListado();
   } catch (err) {
     resultado = { ok: false, error: String(err) };
   }
@@ -1249,6 +1253,7 @@ function manejarEliminarFila(e) {
     if (fila > hoja.getLastRow()) throw new Error('La fila ya no existe');
     hoja.deleteRow(fila);
     resultado = { ok: true };
+    invalidarCacheListado();
   } catch (err) {
     resultado = { ok: false, error: String(err) };
   }
@@ -1262,6 +1267,59 @@ function manejarEliminarFila(e) {
   return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
 
+/* === CACHÉ DEL LISTADO DE INCIDENCIAS =====================
+   Leer y formatear toda la hoja (varios cientos de filas) en cada carga
+   de la web es lo que hace que tarde varios segundos. Como la web pide
+   este mismo listado muy a menudo (al abrir, cada 5 min automáticamente,
+   varias pestañas a la vez...) y la hoja no cambia tan seguido, se cachea
+   el JSON ya construido un rato corto en vez de recalcularlo cada vez.
+   CacheService solo admite valores de hasta 100 KB por clave, así que el
+   JSON se trocea en varias claves si hace falta. */
+var CACHE_LISTADO_PREFIJO = 'INCIDENCIAS_JSON_';
+var CACHE_LISTADO_TTL_SEGUNDOS = 90;
+var CACHE_LISTADO_TROZO_MAX = 90000; // margen bajo el límite de 100 KB
+var CACHE_LISTADO_TROZOS_MAX = 30;   // ~2.7 MB de JSON como mucho
+
+function invalidarCacheListado() {
+  CacheService.getScriptCache().remove(CACHE_LISTADO_PREFIJO + 'n');
+}
+
+function guardarCacheListado(json) {
+  try {
+    var trozos = [];
+    for (var i = 0; i < json.length; i += CACHE_LISTADO_TROZO_MAX) {
+      trozos.push(json.slice(i, i + CACHE_LISTADO_TROZO_MAX));
+    }
+    if (trozos.length > CACHE_LISTADO_TROZOS_MAX) return; // demasiado grande, no cachear
+    var mapa = {};
+    mapa[CACHE_LISTADO_PREFIJO + 'n'] = String(trozos.length);
+    trozos.forEach(function (t, i) { mapa[CACHE_LISTADO_PREFIJO + i] = t; });
+    CacheService.getScriptCache().putAll(mapa, CACHE_LISTADO_TTL_SEGUNDOS);
+  } catch (e) {
+    Logger.log('No se pudo guardar la caché del listado: ' + e);
+  }
+}
+
+function leerCacheListado() {
+  try {
+    var cache = CacheService.getScriptCache();
+    var n = parseInt(cache.get(CACHE_LISTADO_PREFIJO + 'n'), 10);
+    if (!n) return null;
+    var claves = [];
+    for (var i = 0; i < n; i++) claves.push(CACHE_LISTADO_PREFIJO + i);
+    var mapa = cache.getAll(claves);
+    var trozos = [];
+    for (var i = 0; i < n; i++) {
+      var t = mapa[CACHE_LISTADO_PREFIJO + i];
+      if (t == null) return null; // algún trozo caducó/falta: se descarta la caché entera
+      trozos.push(t);
+    }
+    return trozos.join('');
+  } catch (e) {
+    return null;
+  }
+}
+
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'guardar') {
     return manejarGuardarCampo(e);
@@ -1270,31 +1328,35 @@ function doGet(e) {
     return manejarEliminarFila(e);
   }
 
-  const hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
-  const datos = hoja.getDataRange().getValues();
-  // Se asume fila 0 = cabeceras. Columnas según guardarIncidencia():
-  // [marca, fecha, hora, gravedad, categoria, resumen, estado, original, enlace]
-  var inicio = 0;
-  if (datos.length > 0 && !(datos[0][0] instanceof Date)) {
-    inicio = 1;
+  var json = leerCacheListado();
+  if (!json) {
+    const hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+    const datos = hoja.getDataRange().getValues();
+    // Se asume fila 0 = cabeceras. Columnas según guardarIncidencia():
+    // [marca, fecha, hora, gravedad, categoria, resumen, estado, original, enlace]
+    var inicio = 0;
+    if (datos.length > 0 && !(datos[0][0] instanceof Date)) {
+      inicio = 1;
+    }
+    const incidencias = [];
+    for (var i = inicio; i < datos.length; i++) {
+      var f = datos[i];
+      if (!f[1] && !f[5]) continue; // saltar filas vacías
+      incidencias.push({
+        fila: i + 1,
+        fecha: formatearFecha(f[1]),
+        hora: formatearHora(f[2]),
+        gravedad: f[3],
+        categoria: f[4],
+        resumen: f[5],
+        estat: f[6] || 'Obert',
+        original: f[7] || '',
+        enlace: f[8] || ''
+      });
+    }
+    json = JSON.stringify(incidencias);
+    guardarCacheListado(json);
   }
-  const incidencias = [];
-  for (var i = inicio; i < datos.length; i++) {
-    var f = datos[i];
-    if (!f[1] && !f[5]) continue; // saltar filas vacías
-    incidencias.push({
-      fila: i + 1,
-      fecha: formatearFecha(f[1]),
-      hora: formatearHora(f[2]),
-      gravedad: f[3],
-      categoria: f[4],
-      resumen: f[5],
-      estat: f[6] || 'Obert',
-      original: f[7] || '',
-      enlace: f[8] || ''
-    });
-  }
-  const json = JSON.stringify(incidencias);
   const callback = e && e.parameter && e.parameter.callback;
   if (callback) {
     return ContentService
