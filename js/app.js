@@ -490,16 +490,59 @@ function guardarIncidencia() {
   if (typeof window.renderKPIs === "function") window.renderKPIs();
 }
 
-function exportarCSV() {
+// Exportador PDF genérico para una tabla de datos (usado por Incidencias,
+// Operativa y Afectados): mismo estilo visual que los informes PDF, con
+// cabecera oscura repetida en cada página y numeración de páginas.
+async function exportarTablaPDF(titulo, columnas, filas, nombreArchivo) {
+  if (!filas.length) { alert("No hay datos para exportar."); return; }
+  try { await asegurarLibreriasPDF(); } catch (e) { alert("No se ha podido cargar el generador de PDF."); return; }
+  if (!window.jspdf || !window.jspdf.jsPDF) { alert("No se ha podido cargar el generador de PDF."); return; }
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+  var margenIzq = 10;
+  var anchoPagina = doc.internal.pageSize.getWidth();
+  var altoPagina = doc.internal.pageSize.getHeight();
+
+  function encabezado() {
+    doc.setFillColor(15,27,45);
+    doc.rect(0, 0, anchoPagina, 20, "F");
+    doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","bold"); doc.setFontSize(13);
+    doc.text(titulo, margenIzq, 10);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8);
+    doc.setTextColor(232,237,242);
+    doc.text("Vilamarina · Oficina de Gerencia · Generado: " + new Date().toLocaleString("es-ES"), margenIzq, 16);
+  }
+  encabezado();
+
+  doc.autoTable({
+    startY: 24,
+    margin: { top: 22, left: margenIzq, right: margenIzq },
+    head: [columnas],
+    body: filas,
+    theme: "striped",
+    headStyles: { fillColor: [15,27,45], textColor: 255, fontSize: 8, halign: "center" },
+    bodyStyles: { fontSize: 7.5 },
+    styles: { cellPadding: 1.5, overflow: "linebreak" },
+    didDrawPage: function () { encabezado(); }
+  });
+
+  var paginas = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= paginas; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7); doc.setTextColor(122,143,166);
+    doc.text("Página " + p + " de " + paginas, anchoPagina - margenIzq, altoPagina - 6, { align: "right" });
+  }
+
+  doc.save(nombreArchivo);
+}
+
+async function exportarPDF() {
   const filtrats = filtrar();
   if (!filtrats.length) { alert("No hay incidencias para exportar."); return; }
-  const cap = ["ID","Fecha","Hora","Gravedad","Categoría","Ubicación","Resumen","Descripción","Medidas","Vigilante","Estado","Carpeta Imágenes","Ruta Imágenes"];
-  const files = filtrats.map(d=>[d.id,formatData(d.fecha),d.hora,d.gravedad,catEs(d.categoria),d.ubicacion,d.resum,d.descripcion,d.accion,d.vigilant,estadoEs(d.estat),d.imgCarpeta,d.imgRuta]);
-  const csv = [cap,...files].map(r=>r.map(c=>`"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
-  const blob = new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href=url; a.download=`incidencias_vilamarina_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-  URL.revokeObjectURL(url);
+  const columnas = ["ID","Fecha","Hora","Gravedad","Categoría","Ubicación","Resumen","Estado","Vigilante"];
+  const filas = filtrats.map(d=>[d.id,formatData(d.fecha),d.hora,d.gravedad,catEs(d.categoria),d.ubicacion,d.resum||d.descripcion,estadoEs(d.estat),d.vigilant||"—"]);
+  await exportarTablaPDF("Incidencias de Seguridad", columnas, filas, `incidencias_vilamarina_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 // MANTENIMENT
@@ -517,6 +560,14 @@ function filtrarMantenimiento() {
     }
     return true;
   });
+}
+
+async function exportarMantenimientoPDF() {
+  const lista = filtrarMantenimiento();
+  if (!lista.length) { alert("No hay avisos de mantenimiento/operativa para exportar."); return; }
+  const columnas = ["Fecha","Hora","Categoría","Ubicación","Resumen","Estado"];
+  const filas = lista.map(d=>[formatData(d.fecha),d.hora,catEs(d.categoria),d.ubicacion,d.resum||d.descripcion,estadoEs(d.estat)]);
+  await exportarTablaPDF("Mantenimiento y Operativa", columnas, filas, `mantenimiento_vilamarina_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 function renderMantenimiento() {
@@ -965,6 +1016,16 @@ function descargarInformeMTDPDF() {
 }
 
 // AFECTATS
+async function exportarAfectatsPDF() {
+  if (!afectats.length) { alert("No hay afectados para exportar."); return; }
+  const columnas = ["Nombre","DNI/NIE","Teléfono","Incidencia vinculada","Asist. médica","Consentimiento"];
+  const filas = afectats.map(a => {
+    const inc = incidencies.find(i=>i.id===a.incidenciaId);
+    return [a.nom, a.dni, a.tel, inc?`#${inc.id} ${catEs(inc.categoria)} (${formatData(inc.fecha)})`:"—", a.medica, a.consentiment];
+  });
+  await exportarTablaPDF("Afectados / Clientes", columnas, filas, `afectados_vilamarina_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
 function renderAfectats() {
   const tbody = document.getElementById("tbody-afectats");
   if (!afectats.length) {
