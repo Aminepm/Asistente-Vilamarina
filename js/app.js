@@ -367,8 +367,28 @@ function actualitzarMetriques() {
   document.getElementById("m-critica").textContent = reales.filter(d=>d.gravedad==="Crítica").length;
   document.getElementById("m-alta").textContent = reales.filter(d=>d.gravedad==="Alta").length;
   document.getElementById("m-obertes").textContent = reales.filter(d=>d.estat==="Obert").length;
-  document.getElementById("m-mes").textContent = reales.filter(d=>d.fecha.startsWith(mes)).length;
+  document.getElementById("m-mes").textContent = reales.filter(d=>mesDeFecha(d.fecha)===mes).length;
   actualizarBotonRevisar();
+}
+
+// Clic en los contadores de la cabecera: muestran el mismo modal de
+// listado que el gráfico circular, con las incidencias detrás del número.
+function verTotalIncidencias() {
+  var reales = incidencies.filter(d => !esCategoriaOperativa(d.categoria));
+  mostrarListadoIncidenciasModal("Total de incidencias", reales);
+}
+function verIncidenciasCriticas() {
+  var reales = incidencies.filter(d => !esCategoriaOperativa(d.categoria) && d.gravedad === "Crítica");
+  mostrarListadoIncidenciasModal("Incidencias críticas", reales);
+}
+function verIncidenciasAltas() {
+  var reales = incidencies.filter(d => !esCategoriaOperativa(d.categoria) && d.gravedad === "Alta");
+  mostrarListadoIncidenciasModal("Incidencias de gravedad alta", reales);
+}
+function verIncidenciasEsteMes() {
+  var mes = getMesActual();
+  var reales = incidencies.filter(d => !esCategoriaOperativa(d.categoria) && mesDeFecha(d.fecha) === mes);
+  mostrarListadoIncidenciasModal("Incidencias de este mes", reales);
 }
 
 function obrirDetall(id) {
@@ -944,28 +964,43 @@ function resumenDiarioCompleto(lista, desde, hasta) {
 // Abre un modal con las incidencias de una categoría concreta dentro del
 // rango de fechas actualmente seleccionado en Informes. Se llama al hacer
 // clic en un porcentaje/segmento del gráfico circular o en su leyenda.
-function mostrarIncidenciasCategoria(categoria) {
-  var rango = getRangoInformes();
-  var lista = incidenciesEnRango(rango.desde, rango.hasta)
-    .filter(function(d){ return d.categoria === categoria; })
-    .sort(function(a,b){ return (b.fecha+b.hora).localeCompare(a.fecha+a.hora); });
-  var titulo = document.getElementById("categoria-informe-titulo");
-  if (titulo) titulo.textContent = catEs(categoria) + " (" + lista.length + ")";
+// Fila de una incidencia dentro del modal de listado genérico (ver
+// mostrarListadoIncidenciasModal). Al hacer clic se cierra el modal y se
+// abre el detalle completo de esa incidencia.
+function filaListadoIncidencia(d) {
+  return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F0F2F5;cursor:pointer" ' +
+    'onclick="tancarModal(\'modal-categoria-informe\');obrirDetall(\''+d.id+'\')">' +
+    '<span class="badge '+badgeGravClass(d.gravedad)+'" style="flex-shrink:0">'+badgeGravLabel(d.gravedad)+'</span>' +
+    '<div style="flex:1;min-width:0">' +
+    '<div style="font-size:12px;color:#7A8FA6">'+formatData(d.fecha)+' · '+d.hora+'h · '+(d.ubicacion||"")+' · '+
+    '<span class="badge badge-cat" style="font-size:10px;padding:1px 6px">'+catEs(d.categoria)+'</span></div>' +
+    '<div style="font-size:13px;color:#2C3E50;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(d.resum||d.descripcion||"")+'</div>' +
+    '</div>' +
+    '<span class="badge '+(d.estat==="Obert"?"badge-obert":"badge-tancat")+'" style="flex-shrink:0">'+estadoEs(d.estat)+'</span>' +
+    '</div>';
+}
+
+// Modal genérico de listado: usado por el gráfico circular de Informes y
+// por los contadores (Total, Críticas, Altas, Abiertas, Este mes, y los
+// del panel de KPIs) para mostrar de un vistazo las incidencias detrás de
+// un número, con acceso directo al detalle de cada una.
+function mostrarListadoIncidenciasModal(titulo, lista) {
+  var listaOrdenada = lista.slice().sort(function(a,b){ return (b.fecha+b.hora).localeCompare(a.fecha+a.hora); });
+  var tituloEl = document.getElementById("categoria-informe-titulo");
+  if (tituloEl) tituloEl.textContent = titulo + " (" + listaOrdenada.length + ")";
   var body = document.getElementById("categoria-informe-body");
   if (body) {
-    body.innerHTML = lista.length ? lista.map(function(d){
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F0F2F5;cursor:pointer" ' +
-        'onclick="tancarModal(\'modal-categoria-informe\');obrirDetall(\''+d.id+'\')">' +
-        '<span class="badge '+badgeGravClass(d.gravedad)+'" style="flex-shrink:0">'+badgeGravLabel(d.gravedad)+'</span>' +
-        '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:12px;color:#7A8FA6">'+formatData(d.fecha)+' · '+d.hora+'h · '+(d.ubicacion||"")+'</div>' +
-        '<div style="font-size:13px;color:#2C3E50;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(d.resum||d.descripcion||"")+'</div>' +
-        '</div>' +
-        '<span class="badge '+(d.estat==="Obert"?"badge-obert":"badge-tancat")+'" style="flex-shrink:0">'+estadoEs(d.estat)+'</span>' +
-        '</div>';
-    }).join("") : '<div style="color:#7A8FA6;font-size:13px;padding:12px">No hay incidencias de esta categoría en el rango seleccionado.</div>';
+    body.innerHTML = listaOrdenada.length ? listaOrdenada.map(filaListadoIncidencia).join("") :
+      '<div style="color:#7A8FA6;font-size:13px;padding:12px">No hay incidencias que coincidan.</div>';
   }
   document.getElementById("modal-categoria-informe").classList.add("open");
+}
+window.mostrarListadoIncidenciasModal = mostrarListadoIncidenciasModal;
+
+function mostrarIncidenciasCategoria(categoria) {
+  var rango = getRangoInformes();
+  var lista = incidenciesEnRango(rango.desde, rango.hasta).filter(function(d){ return d.categoria === categoria; });
+  mostrarListadoIncidenciasModal(catEs(categoria), lista);
 }
 
 function renderInformes() {
