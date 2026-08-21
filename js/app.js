@@ -1370,7 +1370,7 @@ function mapearFilaSheet(f, i) {
     ubicacion: "Vilamarina",
     vigilant: "",
     accion: "",
-    estat: (f.gravedad === "Crítica" ? "Obert" : "Tancat"),
+    estat: f.estat || (f.gravedad === "Crítica" ? "Obert" : "Tancat"),
     correo: "",
     enlace: f.enlace || "",
     origen: "sheets"
@@ -1383,6 +1383,36 @@ function verIncidencia(id) {
   var d = incidencies.find(function(i){ return String(i.id)===String(id); });
   if (!d) return;
   obrirDetall(d.id);
+}
+
+// Caché local de la última respuesta de la Sheet: se pinta al instante al
+// abrir la página (sin esperar la petición a Apps Script, que puede tardar
+// varios segundos) y se sustituye en segundo plano en cuanto llega la
+// respuesta real. Mejora la velocidad PERCIBIDA de carga; no evita la
+// petición de red, solo evita que la página se quede vacía mientras tanto.
+var VILA_CACHE_KEY = "vilamarina_cache_incidencias_v1";
+
+function guardarCacheIncidencias(filas) {
+  try {
+    localStorage.setItem(VILA_CACHE_KEY, JSON.stringify({ filas: filas, guardado: Date.now() }));
+  } catch (e) { /* localStorage lleno o no disponible: seguimos sin caché */ }
+}
+
+function mostrarCacheIncidencias() {
+  try {
+    var raw = localStorage.getItem(VILA_CACHE_KEY);
+    if (!raw) return;
+    var datos = JSON.parse(raw);
+    if (!datos || !Array.isArray(datos.filas) || !datos.filas.length) return;
+    incidencies = incidencies.filter(function (x) { return x.origen !== "sheets"; });
+    var nuevas = datos.filas.map(mapearFilaSheet);
+    incidencies = nuevas.concat(incidencies);
+    if (typeof renderTabla === "function") renderTabla();
+    if (typeof actualitzarMetriques === "function") actualitzarMetriques();
+    if (typeof renderMantenimiento === "function") renderMantenimiento();
+    if (typeof window.renderKPIs === "function") window.renderKPIs();
+    console.log("[Vilamarina] Mostrando " + nuevas.length + " incidencias desde caché local mientras se actualiza.");
+  } catch (e) { console.warn("[Vilamarina] No se pudo leer la caché local:", e.message); }
 }
 
 async function cargarDesdeSheets() {
@@ -1402,6 +1432,7 @@ async function cargarDesdeSheets() {
           if (typeof renderMantenimiento === "function") renderMantenimiento();
           if (typeof window.renderKPIs === "function") window.renderKPIs();
           console.log("[Vilamarina] Cargadas " + nuevas.length + " incidencias desde Google Sheets.");
+          guardarCacheIncidencias(filas);
         }
       } catch (e) { console.warn("[Vilamarina] Error procesando datos:", e.message); }
       delete window[cbName];
@@ -1426,7 +1457,10 @@ function actualizarAhora() {
   });
 }
 
-// Carga al abrir la página
+// Carga al abrir la página: primero se pinta al instante lo último que
+// haya en caché local (si lo hay), y luego se lanza la petición real a
+// Apps Script para sustituirlo por los datos actualizados.
+mostrarCacheIncidencias();
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", cargarDesdeSheets);
 } else {
