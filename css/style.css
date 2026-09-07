@@ -8,7 +8,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; c
 .topbar-logo img { height: 36px; width: auto; display: block; }
 .topbar-title { color: #E8EDF2; font-size: 15px; font-weight: 500; }
 .topbar-sub { color: #6B7F96; font-size: 12px; margin-top: 1px; }
+.topbar-right { display: flex; align-items: center; gap: 18px; }
 .topbar-nav { display: flex; gap: 6px; }
+.sesion-box { display: flex; align-items: center; gap: 10px; }
+.sesion-info { color: #6B7F96; font-size: 12px; }
+#app-content { display: none; }
+.login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.login-box { background: #fff; border-radius: 14px; padding: 32px 30px; width: 100%; max-width: 340px; box-shadow: 0 10px 40px rgba(15,27,45,.18); display: flex; flex-direction: column; gap: 14px; text-align: center; }
+.login-logo { height: 56px; width: auto; margin: 0 auto 4px; display: block; }
+.login-box h2 { font-size: 18px; color: #0F1B2D; }
+.login-box p { font-size: 13px; color: #7A8FA6; margin-top: -8px; margin-bottom: 4px; }
+.login-box .form-group { text-align: left; }
+.login-error { background: #FDECEC; color: #922B21; font-size: 12px; padding: 8px 10px; border-radius: 7px; }
 .nav-btn { padding: 7px 14px; font-size: 13px; border-radius: 7px; border: none; cursor: pointer; font-weight: 500; transition: all 0.15s; }
 .nav-btn.active { background: #F59E0B; color: #0F1B2D; }
 .nav-btn:not(.active) { background: transparent; color: #7A8FA6; }
