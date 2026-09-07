@@ -1370,7 +1370,31 @@ function leerCacheListado() {
   }
 }
 
+// La lectura completa de incidencias ahora exige la misma clave
+// compartida que ya protegía la escritura (Propiedades del script ->
+// WRITE_SECRET), para que la URL pública del script no sirva por sí
+// sola para ver todas las incidencias sin haber iniciado sesión en la
+// web (que ahora exige usuario/contraseña de Firebase).
+function respuestaJsonp(e, objeto) {
+  var json = JSON.stringify(objeto);
+  var callback = e && e.parameter && e.parameter.callback;
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextOutput(json)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function doGet(e) {
+  var claveEsperada = PROPS.getProperty('WRITE_SECRET') || '';
+  var claveRecibida = (e && e.parameter && e.parameter.clave) || '';
+  if (!claveEsperada || claveRecibida !== claveEsperada) {
+    return respuestaJsonp(e, { ok: false, error: 'Clave incorrecta o no proporcionada' });
+  }
+
   if (e && e.parameter && e.parameter.action === 'guardar') {
     return manejarGuardarCampo(e);
   }
