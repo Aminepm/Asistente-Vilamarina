@@ -19,7 +19,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; c
 .login-box h2 { font-size: 18px; color: #0F1B2D; }
 .login-box p { font-size: 13px; color: #7A8FA6; margin-top: -8px; margin-bottom: 4px; }
 .login-box .form-group { text-align: left; }
+.login-panel { display: flex; flex-direction: column; gap: 14px; }
 .login-error { background: #FDECEC; color: #922B21; font-size: 12px; padding: 8px 10px; border-radius: 7px; }
+.login-error.login-msg-ok { background: #E7F9F4; color: #0F5C4A; }
+.login-link { font-size: 12.5px; margin: 0; }
+.login-link a { color: #14b8a6; text-decoration: none; font-weight: 600; }
+.login-link a:hover { text-decoration: underline; }
 .nav-btn { padding: 7px 14px; font-size: 13px; border-radius: 7px; border: none; cursor: pointer; font-weight: 500; transition: all 0.15s; }
 .nav-btn.active { background: #F59E0B; color: #0F1B2D; }
 .nav-btn:not(.active) { background: transparent; color: #7A8FA6; }
