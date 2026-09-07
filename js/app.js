@@ -109,6 +109,17 @@ var ordenTabla = { campo: "fecha", direccion: -1 };
 var GRAVEDADES_EDITABLES = ["Crítica", "Alta", "Media", "Baja"];
 var CATEGORIAS_EDITABLES = ["Robatori", "Danys", "Accident Parking", "Accident CC", "Accident Laboral", "Incidència Baixa", "Operativa", "Mantenimiento"];
 
+// Selección múltiple de incidencias (checkboxes de la tabla), para poder
+// cambiar la categoría o el estado de varias a la vez desde la barra que
+// aparece encima de la tabla en cuanto hay alguna marcada.
+var seleccionIncidencias = new Set();
+document.addEventListener("DOMContentLoaded", function () {
+  var sel = document.getElementById("sel-categoria-valor");
+  if (sel) sel.innerHTML = CATEGORIAS_EDITABLES.map(function (op) {
+    return '<option value="' + op + '">' + catEs(op) + "</option>";
+  }).join("");
+});
+
 function valorOrden(d, campo) {
   if (campo === "fecha") return (d.fecha || "") + " " + (d.hora || "");
   if (campo === "hora") return d.hora || "";
@@ -344,11 +355,13 @@ function renderTabla() {
   actualizarIndicadoresOrden();
   if (!filtrats.length) {
     const hayIncidencias = incidencies.some(d => !esCategoriaOperativa(d.categoria));
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📋</div>${!hayIncidencias ? "Aún no hay incidencias registradas.<br><small>Haz clic en <strong>Nueva incidencia</strong> para añadir una.</small>" : "Ninguna incidencia coincide con los filtros seleccionados."}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="9"><div class="empty-icon">📋</div>${!hayIncidencias ? "Aún no hay incidencias registradas.<br><small>Haz clic en <strong>Nueva incidencia</strong> para añadir una.</small>" : "Ninguna incidencia coincide con los filtros seleccionados."}</td></tr>`;
+    actualizarBarraSeleccion();
     return;
   }
   tbody.innerHTML = filtrats.map(d => `
     <tr class="${rowClass(d.gravedad)}">
+      <td><input type="checkbox" class="chk-fila" onchange="toggleSeleccionFila('${d.id}',this.checked)" ${seleccionIncidencias.has(String(d.id))?"checked":""}/></td>
       <td class="td-muted">${formatData(d.fecha)}</td>
       <td class="td-muted">${d.hora}</td>
       <td><span class="badge ${badgeGravClass(d.gravedad)}" style="cursor:pointer" title="Haz clic para cambiar la gravedad" onclick="editarCampo(event,'${d.id}','gravedad')">${badgeGravLabel(d.gravedad)}</span></td>
@@ -358,6 +371,72 @@ function renderTabla() {
       <td><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></td>
       <td><button class="btn btn-outline btn-sm" onclick="verIncidencia('${d.id}')">Ver incidencia</button></td>
     </tr>`).join("");
+  var chkTodas = document.getElementById("chk-todas");
+  if (chkTodas) chkTodas.checked = filtrats.every(d => seleccionIncidencias.has(String(d.id)));
+  actualizarBarraSeleccion();
+}
+
+function toggleSeleccionFila(id, marcada) {
+  if (marcada) seleccionIncidencias.add(String(id));
+  else seleccionIncidencias.delete(String(id));
+  var chkTodas = document.getElementById("chk-todas");
+  if (chkTodas) chkTodas.checked = filtrar().every(d => seleccionIncidencias.has(String(d.id)));
+  actualizarBarraSeleccion();
+}
+
+function toggleSeleccionarTodas(checkbox) {
+  filtrar().forEach(function (d) {
+    if (checkbox.checked) seleccionIncidencias.add(String(d.id));
+    else seleccionIncidencias.delete(String(d.id));
+  });
+  renderTabla();
+}
+
+function limpiarSeleccion() {
+  seleccionIncidencias.clear();
+  renderTabla();
+}
+
+function actualizarBarraSeleccion() {
+  var barra = document.getElementById("seleccion-bar");
+  var contador = document.getElementById("seleccion-count");
+  if (!barra || !contador) return;
+  var n = seleccionIncidencias.size;
+  barra.style.display = n > 0 ? "flex" : "none";
+  contador.textContent = n + (n === 1 ? " incidencia seleccionada" : " incidencias seleccionadas");
+}
+
+// Aplica un mismo campo (categoria/estat) a todas las incidencias
+// seleccionadas, reutilizando guardarCampoValor (misma función que usa la
+// edición individual de cada fila), y avisa si alguna no se pudo guardar.
+function aplicarCambioMasivo(campo, valorNuevo, boton, textoOriginal) {
+  var ids = Array.from(seleccionIncidencias);
+  if (!ids.length) return;
+  if (boton) { boton.disabled = true; boton.textContent = "Aplicando..."; }
+  Promise.all(ids.map(function (id) { return guardarCampoValor(id, campo, valorNuevo); }))
+    .then(function (resultados) {
+      var fallos = resultados.filter(function (ok) { return !ok; }).length;
+      if (fallos) alert(fallos + " de " + ids.length + " incidencia(s) no se pudieron actualizar. Vuelve a intentarlo.");
+      seleccionIncidencias.clear();
+      renderTabla();
+    })
+    .finally(function () {
+      if (boton) { boton.disabled = false; boton.textContent = textoOriginal; }
+    });
+}
+
+function aplicarCategoriaSeleccion(ev) {
+  var sel = document.getElementById("sel-categoria-valor");
+  var boton = ev && ev.target;
+  if (!sel || !sel.value) return;
+  aplicarCambioMasivo("categoria", sel.value, boton, "Cambiar categoría");
+}
+
+function aplicarEstadoSeleccion(ev) {
+  var sel = document.getElementById("sel-estado-valor");
+  var boton = ev && ev.target;
+  if (!sel || !sel.value) return;
+  aplicarCambioMasivo("estat", sel.value, boton, "Cambiar estado");
 }
 
 function actualitzarMetriques() {
