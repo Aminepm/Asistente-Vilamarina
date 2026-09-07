@@ -11,12 +11,23 @@
 <div id="login-screen" class="login-screen">
 <div class="login-box">
 <img alt="Centre Comercial Vilamarina" class="login-logo" src="img/logo-vilamarina.png"/>
+<div id="login-form-box" class="login-panel">
 <h2>Acceso restringido</h2>
 <p>Introduce tus credenciales para entrar</p>
 <div class="form-group"><label>Usuario</label><input autocomplete="username" id="login-usuario" placeholder="tu.usuario" type="text"/></div>
 <div class="form-group"><label>Contraseña</label><input id="login-password" placeholder="••••••••" type="password"/></div>
 <div class="login-error" id="login-error" style="display:none"></div>
 <button class="btn btn-accent" id="login-btn" onclick="iniciarSesion()" style="width:100%">Iniciar sesión</button>
+<p class="login-link"><a href="#" onclick="mostrarRecuperar(event)">¿Has olvidado tu contraseña?</a></p>
+</div>
+<div id="recuperar-form-box" class="login-panel" style="display:none">
+<h2>Recuperar contraseña</h2>
+<p>Escribe tu usuario y, si tiene correo real asociado, te enviaremos un enlace para restablecer la contraseña.</p>
+<div class="form-group"><label>Usuario</label><input id="recuperar-usuario" placeholder="tu.usuario" type="text"/></div>
+<div class="login-error" id="recuperar-msg" style="display:none"></div>
+<button class="btn btn-accent" id="recuperar-btn" onclick="enviarRecuperacion()" style="width:100%">Enviar enlace</button>
+<p class="login-link"><a href="#" onclick="mostrarLogin(event)">Volver al inicio de sesión</a></p>
+</div>
 </div>
 </div>
 <div id="app-content">
@@ -537,6 +548,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="js/firebase-config.js"></script>
+<script src="js/usuarios.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/vendor/logo-vilamarina.js"></script>
 <script src="js/kpis.js?v=4"></script>
