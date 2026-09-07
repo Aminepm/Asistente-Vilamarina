@@ -9,10 +9,10 @@
 // Firebase Authentication > Users. No hay registro público de cuentas
 // nuevas desde la propia página.
 var FIREBASE_CONFIG = {
-  apiKey: "TU_API_KEY",
-  authDomain: "tu-proyecto.firebaseapp.com",
-  projectId: "tu-proyecto",
-  storageBucket: "tu-proyecto.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx"
+  apiKey: "AIzaSyA_R25MsJ4SYFuuCIxqKKsbO8sokJw7kIY",
+  authDomain: "incidencias-seguridad-1e678.firebaseapp.com",
+  projectId: "incidencias-seguridad-1e678",
+  storageBucket: "incidencias-seguridad-1e678.firebasestorage.app",
+  messagingSenderId: "709561697867",
+  appId: "1:709561697867:web:43ea67efd12682911dafce"
 };
