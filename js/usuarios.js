@@ -20,5 +20,8 @@
    usuario -> correo.
    ============================================================ */
 var USUARIOS_EMAIL = {
-  // 'gerencia': 'nombre.apellido@vilamarina.com',
+  'auxiliar.vilamarina': 'auxiliar.vilamarina@gbp.cat',
+  'celia.beltran': 'celia.beltran@cbre.com',
+  'renzo.neyra': 'renzo.neyra@cbre.com',
+  'santiago.berto': 'santiago.berto@cbre.com',
 };
