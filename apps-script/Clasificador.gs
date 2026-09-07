@@ -1001,6 +1001,17 @@ function extraerReporte(url) {
   }
 }
 
+// Categorías lo bastante graves como para necesitar seguimiento/gestión
+// con el seguro (accidente de coche, atraco...): las incidencias nuevas
+// de estas categorías se crean en Abierto; el resto se crea directamente
+// en Cerrado. Confirmado con el usuario que "Danys" (daños materiales)
+// NO se incluye aquí.
+var CATEGORIAS_QUEDAN_ABIERTAS = ['Robatori', 'Accident Parking', 'Accident CC'];
+
+function estadoInicialPara(categoria) {
+  return CATEGORIAS_QUEDAN_ABIERTAS.indexOf(categoria) !== -1 ? 'Obert' : 'Tancat';
+}
+
 function guardarIncidencia(inc) {
   const hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
   hoja.appendRow([
@@ -1010,11 +1021,50 @@ function guardarIncidencia(inc) {
     inc.gravedad,
     inc.categoria,
     inc.resumen,
-    'Obert',
+    estadoInicialPara(inc.categoria),
     inc.original,
     inc.enlace || ''
   ]);
   invalidarCacheListado();
+}
+
+/**
+ * Corrección puntual: cierra las incidencias ya existentes que sigan
+ * marcadas como "Obert" pero cuya categoría no es de las que necesitan
+ * seguimiento con el seguro (ver CATEGORIAS_QUEDAN_ABIERTAS). No toca las
+ * que ya están Cerradas, ni fuerza a abrir las que sí son de esas
+ * categorías graves aunque alguien las hubiera cerrado a mano.
+ * Ejecútala una sola vez (▶ Ejecutar -> cerrarIncidenciasNoGravesHistorico)
+ * y revisa el resultado en el log.
+ */
+function cerrarIncidenciasNoGravesHistorico() {
+  var hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+  var datos = hoja.getDataRange().getValues();
+  var inicio = (datos.length > 0 && !(datos[0][0] instanceof Date)) ? 1 : 0;
+  if (datos.length <= inicio) {
+    Logger.log('No hay filas de datos que revisar.');
+    return;
+  }
+  var nuevosEstados = [];
+  var cambios = 0, revisadas = 0;
+  for (var i = inicio; i < datos.length; i++) {
+    var f = datos[i];
+    if (!f[1] && !f[5]) { nuevosEstados.push([f[6]]); continue; } // fila vacía, no tocar
+    revisadas++;
+    var categoria = f[4];
+    var estadoActual = f[6];
+    var debeQuedarAbierta = CATEGORIAS_QUEDAN_ABIERTAS.indexOf(categoria) !== -1;
+    if (!debeQuedarAbierta && estadoActual === 'Obert') {
+      nuevosEstados.push(['Tancat']);
+      cambios++;
+    } else {
+      nuevosEstados.push([estadoActual]);
+    }
+  }
+  hoja.getRange(inicio + 1, 7, nuevosEstados.length, 1).setValues(nuevosEstados);
+  invalidarCacheListado();
+  Logger.log('Revisadas ' + revisadas + ' filas. Cerradas automáticamente: ' + cambios +
+    ' (categoría no grave que seguía marcada como Abierta).');
 }
 
 /* === LIMPIEZA ÚNICA: reclasificar filas ya guardadas =============
