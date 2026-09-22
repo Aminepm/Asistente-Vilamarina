@@ -50,7 +50,7 @@ function esTextoMantenimiento(d) {
   return PALABRAS_MANTENIMIENTO.some(function(p){ return texto.indexOf(p) !== -1; });
 }
 function categoriaEfectiva(d) {
-  if (d.categoria === "Incidència Baixa" && esTextoMantenimiento(d)) return "Mantenimiento";
+  if (d.categoria === "Incidencia Leve" && esTextoMantenimiento(d)) return "Mantenimiento";
   return d.categoria;
 }
 
@@ -107,7 +107,7 @@ function filtrar() {
 
 var ordenTabla = { campo: "fecha", direccion: -1 };
 var GRAVEDADES_EDITABLES = ["Crítica", "Alta", "Media", "Baja"];
-var CATEGORIAS_EDITABLES = ["Robatori", "Danys", "Accident Parking", "Accident CC", "Accident Laboral", "Incidència Baixa", "Operativa", "Mantenimiento"];
+var CATEGORIAS_EDITABLES = ["Robo", "Daños", "Accidente Parking", "Accidente CC", "Accidente Laboral", "Incidencia Leve", "Operativa", "Mantenimiento"];
 
 // Selección múltiple de incidencias (checkboxes de la tabla), para poder
 // cambiar la categoría o el estado de varias a la vez desde la barra que
@@ -140,7 +140,7 @@ function ordenarPor(campo) {
 // abiertas" y desde la propia métrica "Abiertas" del panel.
 function verSoloAbiertas() {
   var sel = document.getElementById("f-estat");
-  if (sel) sel.value = "Obert";
+  if (sel) sel.value = "Abierto";
   renderTabla();
   var panel = document.querySelector("#view-incidencies .panel");
   if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -368,7 +368,7 @@ function renderTabla() {
       <td><span class="badge badge-cat" style="cursor:pointer" title="Haz clic para cambiar la categoría" onclick="editarCampo(event,'${d.id}','categoria')">${d.categoria}</span></td>
       <td class="td-muted" style="font-size:12px">${d.ubicacion}</td>
       <td style="font-size:12px;color:#4A5568;max-width:200px">${d.resum||d.descripcion}</td>
-      <td><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></td>
+      <td><span class="badge ${d.estat==='Abierto'?'badge-obert':'badge-tancat'}">${d.estat}</span></td>
       <td><button class="btn btn-outline btn-sm" onclick="verIncidencia('${d.id}')">Ver incidencia</button></td>
     </tr>`).join("");
   var chkTodas = document.getElementById("chk-todas");
@@ -445,7 +445,7 @@ function actualitzarMetriques() {
   document.getElementById("m-total").textContent = reales.length;
   document.getElementById("m-critica").textContent = reales.filter(d=>d.gravedad==="Crítica").length;
   document.getElementById("m-alta").textContent = reales.filter(d=>d.gravedad==="Alta").length;
-  document.getElementById("m-obertes").textContent = reales.filter(d=>d.estat==="Obert").length;
+  document.getElementById("m-obertes").textContent = reales.filter(d=>d.estat==="Abierto").length;
   document.getElementById("m-mes").textContent = reales.filter(d=>mesDeFecha(d.fecha)===mes).length;
   actualizarBotonRevisar();
 }
@@ -475,7 +475,7 @@ function obrirDetall(id) {
   if (!d) return;
   incidenciaDetallActual = d;
   document.getElementById("detall-titol").textContent = `#${d.id} — ${catEs(d.categoria)}`;
-  document.getElementById("btn-toggle-estat").textContent = d.estat==="Obert" ? "Marcar como cerrado" : "Reabrir";
+  document.getElementById("btn-toggle-estat").textContent = d.estat==="Abierto" ? "Marcar como cerrado" : "Reabrir";
   const af = afectats.filter(a=>a.incidenciaId===d.id);
   document.getElementById("detall-body").innerHTML = `
     <div class="detail-section">
@@ -486,7 +486,7 @@ function obrirDetall(id) {
         <div class="detail-item"><div class="detail-label">Gravedad</div><div class="detail-value"><span class="badge ${badgeGravClass(d.gravedad)}">${badgeGravLabel(d.gravedad)}</span></div></div>
         <div class="detail-item"><div class="detail-label">Categoría</div><div class="detail-value"><span class="badge badge-cat">${d.categoria}</span></div></div>
         <div class="detail-item"><div class="detail-label">Ubicación</div><div class="detail-value">${d.ubicacion}</div></div>
-        <div class="detail-item"><div class="detail-label">Estado</div><div class="detail-value"><span class="badge ${d.estat==='Obert'?'badge-obert':'badge-tancat'}">${d.estat}</span></div></div>
+        <div class="detail-item"><div class="detail-label">Estado</div><div class="detail-value"><span class="badge ${d.estat==='Abierto'?'badge-obert':'badge-tancat'}">${d.estat}</span></div></div>
         ${d.enlace?`<div class="detail-item"><div class="detail-label">Informe original</div><div class="detail-value"><a href="${d.enlace}" target="_blank" rel="noopener">Abrir informe ↗</a></div></div>`:""}
       </div>
     </div>
@@ -509,7 +509,7 @@ function toggleEstat() {
   if (!incidenciaDetallActual) return;
   const d = incidencies.find(i=>i.id===incidenciaDetallActual.id);
   if (!d) return;
-  const nuevo = d.estat==="Obert" ? "Tancat" : "Obert";
+  const nuevo = d.estat==="Abierto" ? "Cerrado" : "Abierto";
   guardarCampoValor(d.id, "estat", nuevo).then(function (ok) {
     if (!ok) { alert("No se ha podido guardar el cambio de estado en la hoja. Se revierte."); return; }
     tancarModal("modal-detall");
@@ -565,8 +565,8 @@ function obrirModalNova(categoriaDefecto) {
   document.getElementById("n-fecha").value = hoy;
   document.getElementById("n-hora").value = hora;
   document.getElementById("n-gravedad").value = "Media";
-  document.getElementById("n-categoria").value = categoriaDefecto || "Incidència Baixa";
-  document.querySelector('input[name="n-estat"][value="Tancat"]').checked = true;
+  document.getElementById("n-categoria").value = categoriaDefecto || "Incidencia Leve";
+  document.querySelector('input[name="n-estat"][value="Cerrado"]').checked = true;
   const titulo = document.getElementById("modal-nova-titol");
   if (titulo) titulo.textContent = categoriaDefecto === "Mantenimiento" ? "Nuevo aviso de mantenimiento" : "Nueva incidencia";
   document.getElementById("modal-nova").classList.add("open");
@@ -698,8 +698,8 @@ function renderMantenimiento() {
   var todos = incidencies.filter(function(d){ return esCategoriaOperativa(d.categoria); });
   var mesActual = getMesActual();
   var totalEl = document.getElementById("mt-total"); if (totalEl) totalEl.textContent = todos.length;
-  var abEl = document.getElementById("mt-abiertas"); if (abEl) abEl.textContent = todos.filter(function(d){ return d.estat==="Obert"; }).length;
-  var ceEl = document.getElementById("mt-cerradas"); if (ceEl) ceEl.textContent = todos.filter(function(d){ return d.estat==="Tancat"; }).length;
+  var abEl = document.getElementById("mt-abiertas"); if (abEl) abEl.textContent = todos.filter(function(d){ return d.estat==="Abierto"; }).length;
+  var ceEl = document.getElementById("mt-cerradas"); if (ceEl) ceEl.textContent = todos.filter(function(d){ return d.estat==="Cerrado"; }).length;
   var mesEl = document.getElementById("mt-mes"); if (mesEl) mesEl.textContent = todos.filter(function(d){ return (d.fecha||"").startsWith(mesActual); }).length;
 
   var lista = filtrarMantenimiento();
@@ -716,7 +716,7 @@ function renderMantenimiento() {
       '<td><span class="badge badge-cat">'+catEs(d.categoria)+'</span></td>'+
       '<td class="td-muted" style="font-size:12px">'+d.ubicacion+'</td>'+
       '<td style="font-size:12px;color:#4A5568;max-width:200px">'+(d.resum||d.descripcion)+'</td>'+
-      '<td><span class="badge '+(d.estat==='Obert'?'badge-obert':'badge-tancat')+'">'+estadoEs(d.estat)+'</span></td>'+
+      '<td><span class="badge '+(d.estat==='Abierto'?'badge-obert':'badge-tancat')+'">'+estadoEs(d.estat)+'</span></td>'+
       '<td><button class="btn btn-outline btn-sm" onclick="verIncidencia(\''+d.id+'\')">Ver</button></td>'+
       '</tr>';
   }).join("");
@@ -724,25 +724,25 @@ function renderMantenimiento() {
 
 // INFORMES
 var INF_COLORS = {
-  "Robatori": "#ef4444",
-  "Danys": "#f59e0b",
-  "Accident Parking": "#8b5cf6",
-  "Accident CC": "#3b82f6",
-  "Accident Laboral": "#06b6d4",
-  "Incidència Baixa": "#10b981"
+  "Robo": "#ef4444",
+  "Daños": "#f59e0b",
+  "Accidente Parking": "#8b5cf6",
+  "Accidente CC": "#3b82f6",
+  "Accidente Laboral": "#06b6d4",
+  "Incidencia Leve": "#10b981"
 };
-var INF_CATEGORIAS = ["Robatori","Danys","Accident Parking","Accident CC","Accident Laboral","Incidència Baixa"];
+var INF_CATEGORIAS = ["Robo","Daños","Accidente Parking","Accidente CC","Accidente Laboral","Incidencia Leve"];
 var INF_MESOS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 var INF_CATEGORIA_ES = {
-  "Robatori": "Robo",
-  "Danys": "Daños",
-  "Accident Parking": "Accidente Parking",
-  "Accident CC": "Accidente CC",
-  "Accident Laboral": "Accidente laboral",
-  "Incidència Baixa": "Incidencia leve"
+  "Robo": "Robo",
+  "Daños": "Daños",
+  "Accidente Parking": "Accidente Parking",
+  "Accidente CC": "Accidente CC",
+  "Accidente Laboral": "Accidente laboral",
+  "Incidencia Leve": "Incidencia leve"
 };
 function catEs(cat) { return INF_CATEGORIA_ES[cat] || cat; }
-var ESTADO_ES = { "Obert": "Abierto", "Tancat": "Cerrado" };
+var ESTADO_ES = { "Abierto": "Abierto", "Cerrado": "Cerrado" };
 function estadoEs(e) { return ESTADO_ES[e] || e; }
 var INF_MESES_CORTOS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 function nombreMesCorto(m) {
@@ -993,7 +993,7 @@ function resumenMensualCompleto(lista) {
     else if (d.gravedad==="Alta") f.altas++;
     else if (d.gravedad==="Media") f.medias++;
     else if (d.gravedad==="Baja") f.bajas++;
-    if (d.estat==="Obert") f.abiertas++; else f.cerradas++;
+    if (d.estat==="Abierto") f.abiertas++; else f.cerradas++;
     if (f.categorias[d.categoria] !== undefined) f.categorias[d.categoria]++;
   });
   return Object.keys(porMes).sort().map(function(m){ return porMes[m]; });
@@ -1020,7 +1020,7 @@ function resumenDiarioCompleto(lista, desde, hasta) {
     else if (d.gravedad==="Alta") fila.altas++;
     else if (d.gravedad==="Media") fila.medias++;
     else if (d.gravedad==="Baja") fila.bajas++;
-    if (d.estat==="Obert") fila.abiertas++; else fila.cerradas++;
+    if (d.estat==="Abierto") fila.abiertas++; else fila.cerradas++;
     if (fila.categorias[d.categoria] !== undefined) fila.categorias[d.categoria]++;
   });
   if (!desde || !hasta) return Object.keys(porDia).sort().map(function(f){ return Object.assign({ mes: f }, porDia[f]); });
@@ -1055,7 +1055,7 @@ function filaListadoIncidencia(d) {
     '<span class="badge badge-cat" style="font-size:10px;padding:1px 6px">'+catEs(d.categoria)+'</span></div>' +
     '<div style="font-size:13px;color:#2C3E50;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(d.resum||d.descripcion||"")+'</div>' +
     '</div>' +
-    '<span class="badge '+(d.estat==="Obert"?"badge-obert":"badge-tancat")+'" style="flex-shrink:0">'+estadoEs(d.estat)+'</span>' +
+    '<span class="badge '+(d.estat==="Abierto"?"badge-obert":"badge-tancat")+'" style="flex-shrink:0">'+estadoEs(d.estat)+'</span>' +
     '</div>';
 }
 
@@ -1135,7 +1135,7 @@ async function generarPDFInforme(lista, rango, sufijo) {
   var filasGrafico = esRangoDiario ? resumenDiarioCompleto(lista, rango.desde, rango.hasta) : filasMes;
   var criticas = lista.filter(function(d){ return d.gravedad==="Crítica"; }).length;
   var altas = lista.filter(function(d){ return d.gravedad==="Alta"; }).length;
-  var abiertas = lista.filter(function(d){ return d.estat==="Obert"; }).length;
+  var abiertas = lista.filter(function(d){ return d.estat==="Abierto"; }).length;
   var cerradas = lista.length - abiertas;
 
   function encabezado() {
@@ -1196,19 +1196,19 @@ async function generarPDFInforme(lista, rango, sufijo) {
   doc.autoTable({
     startY: y + 4,
     margin: { top: 38, left: margenIzq, right: margenIzq },
-    head: [["Mes","Total","Críticas","Altas","Medias","Bajas",catEs("Robatori"),catEs("Danys"),catEs("Accident Parking"),catEs("Accident CC"),catEs("Accident Laboral"),catEs("Incidència Baixa"),"Abiertas","Cerradas"]],
+    head: [["Mes","Total","Críticas","Altas","Medias","Bajas",catEs("Robo"),catEs("Daños"),catEs("Accidente Parking"),catEs("Accidente CC"),catEs("Accidente Laboral"),catEs("Incidencia Leve"),"Abiertas","Cerradas"]],
     body: filasMes.map(function(f){
       return [nombreMes(f.mes), f.total, f.criticas, f.altas, f.medias, f.bajas,
-        f.categorias["Robatori"], f.categorias["Danys"], f.categorias["Accident Parking"], f.categorias["Accident CC"], f.categorias["Accident Laboral"], f.categorias["Incidència Baixa"],
+        f.categorias["Robo"], f.categorias["Daños"], f.categorias["Accidente Parking"], f.categorias["Accidente CC"], f.categorias["Accidente Laboral"], f.categorias["Incidencia Leve"],
         f.abiertas, f.cerradas];
     }),
     foot: [["TOTAL", lista.length,
       filasMes.reduce(function(s,f){return s+f.criticas;},0), filasMes.reduce(function(s,f){return s+f.altas;},0),
       filasMes.reduce(function(s,f){return s+f.medias;},0), filasMes.reduce(function(s,f){return s+f.bajas;},0),
-      filasMes.reduce(function(s,f){return s+f.categorias["Robatori"];},0), filasMes.reduce(function(s,f){return s+f.categorias["Danys"];},0),
-      filasMes.reduce(function(s,f){return s+f.categorias["Accident Parking"];},0), filasMes.reduce(function(s,f){return s+f.categorias["Accident CC"];},0),
-      filasMes.reduce(function(s,f){return s+f.categorias["Accident Laboral"];},0),
-      filasMes.reduce(function(s,f){return s+f.categorias["Incidència Baixa"];},0),
+      filasMes.reduce(function(s,f){return s+f.categorias["Robo"];},0), filasMes.reduce(function(s,f){return s+f.categorias["Daños"];},0),
+      filasMes.reduce(function(s,f){return s+f.categorias["Accidente Parking"];},0), filasMes.reduce(function(s,f){return s+f.categorias["Accidente CC"];},0),
+      filasMes.reduce(function(s,f){return s+f.categorias["Accidente Laboral"];},0),
+      filasMes.reduce(function(s,f){return s+f.categorias["Incidencia Leve"];},0),
       filasMes.reduce(function(s,f){return s+f.abiertas;},0), filasMes.reduce(function(s,f){return s+f.cerradas;},0)]],
     theme: "grid",
     showFoot: "lastPage",
@@ -1604,19 +1604,20 @@ renderTabla();
 
 
 /* === Capa de visualización en castellano (añadida) ===
-   Traduce SOLO las etiquetas visibles de categoría y estado que aún
-   se muestran con su clave interna (Robatori, Danys, Obert, etc.),
-   sin modificar los valores guardados. */
+   Normaliza SOLO las etiquetas visibles de categoría que se muestran
+   directamente con el valor interno en mayúsculas (p. ej. "Accidente
+   Laboral"), a la grafía de exhibición ya usada en el resto de la web
+   ("Accidente laboral"), sin modificar los valores guardados. */
 (function(){
   const LABELS = {
-    'Robatori':'Robo',
-    'Danys':'Daños',
-    'Accident Parking':'Accidente Parking',
-    'Accident CC':'Accidente CC',
-    'Accident Laboral':'Accidente laboral',
-    'Incidència Baixa':'Incidencia leve',
-    'Obert':'Abierto',
-    'Tancat':'Cerrado'
+    'Robo':'Robo',
+    'Daños':'Daños',
+    'Accidente Parking':'Accidente Parking',
+    'Accidente CC':'Accidente CC',
+    'Accidente Laboral':'Accidente laboral',
+    'Incidencia Leve':'Incidencia leve',
+    'Abierto':'Abierto',
+    'Cerrado':'Cerrado'
   };
   function traducirNodo(nodo){
     if (nodo.nodeType === Node.TEXT_NODE) {
@@ -1668,7 +1669,7 @@ function mapearFilaSheet(f, i) {
     ubicacion: "Vilamarina",
     vigilant: "",
     accion: "",
-    estat: f.estat || "Tancat",
+    estat: f.estat || "Cerrado",
     correo: "",
     enlace: f.enlace || "",
     origen: "sheets"

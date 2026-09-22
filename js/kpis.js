@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  var EXCLUIR = { 'Operativa': 1, 'Incidència Baixa': 1, 'Mantenimiento': 1 };
+  var EXCLUIR = { 'Operativa': 1, 'Incidencia Leve': 1, 'Mantenimiento': 1 };
 
   function esNocturno(hora) {
     var hh = parseInt(String(hora || '').split(':')[0], 10);
@@ -46,21 +46,21 @@
   // categoría que resulte ser realmente la más frecuente (antes estaba
   // fijo en "Daños" sin comprobar los datos).
   var CONSEJO_CATEGORIA = {
-    'Robatori': 'Reforzar la vigilancia en sala y la coordinación con el personal de los locales durante la apertura, y el CCTV con visión nocturna en accesos exteriores fuera de horario.',
-    'Danys': 'Revisar mantenimiento y protección del mobiliario y las zonas más afectadas.',
-    'Accident CC': 'Revisar señalización y estado del suelo en las zonas con más accidentes dentro del centro.',
-    'Accident Parking': 'Revisar señalización, iluminación y estado del pavimento del parking.'
+    'Robo': 'Reforzar la vigilancia en sala y la coordinación con el personal de los locales durante la apertura, y el CCTV con visión nocturna en accesos exteriores fuera de horario.',
+    'Daños': 'Revisar mantenimiento y protección del mobiliario y las zonas más afectadas.',
+    'Accidente CC': 'Revisar señalización y estado del suelo en las zonas con más accidentes dentro del centro.',
+    'Accidente Parking': 'Revisar señalización, iluminación y estado del pavimento del parking.'
   };
 
   function computeKPIs() {
     var inc = (typeof incidencies !== 'undefined' && incidencies) ? incidencies : [];
     var rel = inc.filter(function (i) { return !EXCLUIR[i.categoria]; });
-    var robosArr = rel.filter(function (i) { return i.categoria === 'Robatori'; });
+    var robosArr = rel.filter(function (i) { return i.categoria === 'Robo'; });
     var robos = robosArr.length;
     var robosNoct = robosArr.filter(function (i) { return esNocturno(i.hora); }).length;
-    var danys = rel.filter(function (i) { return i.categoria === 'Danys'; }).length;
-    var accCC = rel.filter(function (i) { return i.categoria === 'Accident CC'; }).length;
-    var accParking = rel.filter(function (i) { return i.categoria === 'Accident Parking'; }).length;
+    var danys = rel.filter(function (i) { return i.categoria === 'Daños'; }).length;
+    var accCC = rel.filter(function (i) { return i.categoria === 'Accidente CC'; }).length;
+    var accParking = rel.filter(function (i) { return i.categoria === 'Accidente Parking'; }).length;
 
     var zonaConteo = {};
     rel.forEach(function (i) {
@@ -73,10 +73,10 @@
     });
 
     var categorias = [
-      { nombre: 'Robatori', label: 'Robos', val: robos },
-      { nombre: 'Danys', label: 'Daños', val: danys },
-      { nombre: 'Accident CC', label: 'Accidentes en el centro', val: accCC },
-      { nombre: 'Accident Parking', label: 'Accidentes en el parking', val: accParking }
+      { nombre: 'Robo', label: 'Robos', val: robos },
+      { nombre: 'Daños', label: 'Daños', val: danys },
+      { nombre: 'Accidente CC', label: 'Accidentes en el centro', val: accCC },
+      { nombre: 'Accidente Parking', label: 'Accidentes en el parking', val: accParking }
     ];
     var categoriaTop = categorias.reduce(function (a, b) { return b.val > a.val ? b : a; });
 
@@ -120,10 +120,10 @@
     var listas = {
       total: rel,
       gravAlta: inc.filter(function (i) { return i.gravedad === 'Alta'; }),
-      robos: rel.filter(function (i) { return i.categoria === 'Robatori'; }),
-      danys: rel.filter(function (i) { return i.categoria === 'Danys'; }),
-      accCC: rel.filter(function (i) { return i.categoria === 'Accident CC'; }),
-      accParking: rel.filter(function (i) { return i.categoria === 'Accident Parking'; })
+      robos: rel.filter(function (i) { return i.categoria === 'Robo'; }),
+      danys: rel.filter(function (i) { return i.categoria === 'Daños'; }),
+      accCC: rel.filter(function (i) { return i.categoria === 'Accidente CC'; }),
+      accParking: rel.filter(function (i) { return i.categoria === 'Accidente Parking'; })
     };
     if (typeof window.mostrarListadoIncidenciasModal === 'function') {
       window.mostrarListadoIncidenciasModal(titulos[tipo] || 'Incidencias', listas[tipo] || []);
