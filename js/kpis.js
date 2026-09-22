@@ -72,6 +72,20 @@
       if (zonaConteo[z] > zonaTopCount) { zonaTop = z; zonaTopCount = zonaConteo[z]; }
     });
 
+    // Igual que zonaTop, pero calculado SOLO sobre los robos: la zona con
+    // más incidencias en general (ej. aseos por daños) puede tapar un
+    // patrón real de robos concentrados en otra zona (ej. el parking) si
+    // solo se mira el total mezclando todas las categorías.
+    var zonaRobosConteo = {};
+    robosArr.forEach(function (i) {
+      var zona = detectarZona((i.resum || '') + ' ' + (i.descripcion || ''));
+      if (zona) zonaRobosConteo[zona] = (zonaRobosConteo[zona] || 0) + 1;
+    });
+    var zonaTopRobos = null, zonaTopRobosCount = 0;
+    Object.keys(zonaRobosConteo).forEach(function (z) {
+      if (zonaRobosConteo[z] > zonaTopRobosCount) { zonaTopRobos = z; zonaTopRobosCount = zonaRobosConteo[z]; }
+    });
+
     var categorias = [
       { nombre: 'Robo', label: 'Robos', val: robos },
       { nombre: 'Daños', label: 'Daños', val: danys },
@@ -91,6 +105,8 @@
       robosCom: robos - robosNoct,
       zonaTop: zonaTop,
       zonaTopCount: zonaTopCount,
+      zonaTopRobos: zonaTopRobos,
+      zonaTopRobosCount: zonaTopRobosCount,
       categoriaTop: categoriaTop
     };
   }
@@ -145,6 +161,20 @@
     var puntoCaliente = k.zonaTop
       ? '<li style="margin-bottom:6px"><strong>Puntos calientes:</strong> la zona de <strong>' + k.zonaTop + '</strong> concentra el mayor número de incidencias detectadas por texto (' + k.zonaTopCount + '). Reforzar CCTV y rondas específicas ahí.</li>'
       : '<li style="margin-bottom:6px"><strong>Puntos calientes:</strong> no se ha detectado ninguna zona repetida en el texto de las incidencias. Conviene registrar la ubicación de forma más sistemática (planta, zona, comercio) para poder identificar puntos calientes.</li>';
+    // Patrón de robos por zona, calculado solo entre los robos (no se ve
+    // tapado por otras categorías con más incidencias en otra zona, a
+    // diferencia de "Puntos calientes" de arriba). Solo se muestra si esa
+    // zona es distinta de la ya señalada en "Puntos calientes", para no
+    // repetir la misma zona dos veces con la misma cifra.
+    var robosEnZona = (k.zonaTopRobos && k.zonaTopRobos !== k.zonaTop)
+      ? '<li style="margin-bottom:6px"><strong>Robos concentrados en ' + k.zonaTopRobos + ' (' + k.zonaTopRobosCount + '):</strong> reforzar vigilancia, CCTV e iluminación específicamente en esa zona.</li>'
+      : '';
+    var robosNocturnosBullet = k.robosNoct > 0
+      ? '<li style="margin-bottom:6px"><strong>Robos nocturnos en el exterior (' + k.robosNoct + '):</strong> con el centro cerrado, ocurren en zonas exteriores (aparcabicis, gimnasio). Priorizar CCTV con visión nocturna, iluminación y coordinación con Mossos/112.</li>'
+      : '';
+    var robosComercialBullet = k.robosCom > 0
+      ? '<li style="margin-bottom:6px"><strong>Robos/hurtos en horario comercial (' + k.robosCom + '):</strong> se producen dentro de tiendas y restauración durante la apertura. Reforzar vigilancia en sala y coordinación con el personal de los locales.</li>'
+      : '';
     var categoriaMasFrecuente = k.categoriaTop.val > 0
       ? '<li style="margin-bottom:6px"><strong>' + k.categoriaTop.label + ' (' + k.categoriaTop.val + '):</strong> es la categoría más frecuente del periodo. ' + (CONSEJO_CATEGORIA[k.categoriaTop.nombre] || '') + '</li>'
       : '';
@@ -168,8 +198,9 @@
         '<div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:10px">💡 Propuestas de mejora y prevención</div>' +
         '<ul style="margin:0;padding-left:20px;color:#374151;font-size:13px;line-height:1.7">' +
           puntoCaliente +
-          '<li style="margin-bottom:6px"><strong>Robos nocturnos en el exterior (' + k.robosNoct + '):</strong> con el centro cerrado, ocurren en zonas exteriores (aparcabicis, gimnasio). Priorizar CCTV con visión nocturna, iluminación y coordinación con Mossos/112.</li>' +
-          '<li style="margin-bottom:6px"><strong>Robos/hurtos en horario comercial (' + k.robosCom + '):</strong> se producen dentro de tiendas y restauración durante la apertura. Reforzar vigilancia en sala y coordinación con el personal de los locales.</li>' +
+          robosEnZona +
+          robosNocturnosBullet +
+          robosComercialBullet +
           categoriaMasFrecuente +
           '<li style="margin-bottom:6px"><strong>Calidad del registro:</strong> conviene separar tareas operativas nocturnas (retirada de protocolo, incidencias técnicas) de las incidencias de seguridad, y añadir <strong>hora de cierre</strong> y <strong>ubicación estructurada</strong>.</li>' +
         '</ul>' +
