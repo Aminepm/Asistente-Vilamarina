@@ -331,7 +331,7 @@ function esOperativaClara(desc) {
 // usuario): si el texto describe claramente que alguien se ha caído/
 // resbalado Y hay señal de lesión, se decide la categoría exacta por
 // contexto en vez de dejarlo solo en manos de la IA, que confundía estos
-// casos con "Danys" (ver caso del ascensor). Si no hay señal de lesión
+// casos con "Daños" (ver caso del ascensor). Si no hay señal de lesión
 // clara, se deja pasar a la IA (puede ser una caída sin consecuencia,
 // mejor que decida ella con más matices).
 var PALABRAS_CAIDA_PERSONA = [
@@ -352,9 +352,9 @@ var PALABRAS_LUGAR_PARKING = ['parking', 'aparcamiento', 'parkin', 'pk-', 'pk ']
  * Devuelve la categoría si el texto describe con claridad un accidente
  * real de persona, o null si no hay señal suficiente y debe decidir la IA.
  * Confirmado con el usuario: si la caída es de un CLIENTE en el parking,
- * cuenta como Accident Parking aunque no se mencione lesión explícita
+ * cuenta como Accidente Parking aunque no se mencione lesión explícita
  * (la propia caída en esa zona ya es motivo suficiente). Para empleados o
- * para el resto del centro (Accident CC) sí hace falta una señal de
+ * para el resto del centro (Accidente CC) sí hace falta una señal de
  * lesión clara, porque ahí una mención de caída sin más contexto es
  * demasiado ambigua.
  */
@@ -364,14 +364,14 @@ function categoriaAccidentePersonaClaro(desc) {
   if (!hayCaida) return null;
   var hayLesion = PALABRAS_LESION.some(function (p) { return t.indexOf(p) !== -1; });
   if (PALABRAS_EMPLEADO_CENTRO.some(function (p) { return t.indexOf(p) !== -1; })) {
-    return hayLesion ? 'Accident CC' : null;
+    return hayLesion ? 'Accidente CC' : null;
   }
-  if (PALABRAS_LUGAR_PARKING.some(function (p) { return t.indexOf(p) !== -1; })) return 'Accident Parking';
-  return hayLesion ? 'Accident CC' : null;
+  if (PALABRAS_LUGAR_PARKING.some(function (p) { return t.indexOf(p) !== -1; })) return 'Accidente Parking';
+  return hayLesion ? 'Accidente CC' : null;
 }
 
 // Robo en grado de tentativa/intención (confirmado con el usuario: cuenta
-// como Robatori aunque no se llegue a consumar el hurto).
+// como Robo aunque no se llegue a consumar el hurto).
 var PALABRAS_INTENTO_ROBO = [
   'intentan hurtar', 'intentando robar', 'intentan robar',
   'intento de robo', 'intento de hurto', 'intenciones de robar',
@@ -385,7 +385,7 @@ function esIntentoRoboClaro(desc) {
 
 // Hurto ya consumado (no solo intento): el cliente se lleva algo sin
 // pagar, se confirma la sustracción, etc. Confirmado con el usuario:
-// cuenta como Robatori en vez de caer en el catch-all "Accident CC" de
+// cuenta como Robo en vez de caer en el catch-all "Accidente CC" de
 // la IA cuando el hurto ya se ha consumado.
 var PALABRAS_HURTO_CONSUMADO = [
   'sin pagar', 'se van sin pagar', 'se va sin pagar', 'se marcha sin pagar',
@@ -409,7 +409,7 @@ function esHurtoConsumadoClaro(desc) {
 }
 
 // Daño a un vehículo (propio o de un cliente), confirmado con el usuario
-// como Accident Parking en vez de Danys, aunque el coche sea la víctima
+// como Accidente Parking en vez de Daños, aunque el coche sea la víctima
 // del daño (ej. "les han roto un vidrio del coche") y no la causa.
 var PALABRAS_VEHICULO = ['vehículo', 'vehiculo', 'coche', 'coches'];
 var PALABRAS_ROTURA_VEHICULO = ['roto', 'rota', 'rotas', 'rotos', 'romper', 'rompen', 'dañado', 'dañada'];
@@ -420,8 +420,8 @@ function esDanyVehiculoClaro(desc) {
   return PALABRAS_ROTURA_VEHICULO.some(function (p) { return t.indexOf(p) !== -1; });
 }
 
-// Bullying/acoso a un menor: confirmado con el usuario como Incidència
-// Baixa pero con gravedad Alta (no la gravedad estándar de esa
+// Bullying/acoso a un menor: confirmado con el usuario como Incidencia
+// Leve pero con gravedad Alta (no la gravedad estándar de esa
 // categoría), por tratarse de una víctima especialmente vulnerable.
 var PALABRAS_BULLYING = ['bullying', 'buling', 'bulling', 'acoso'];
 function esBullyingClaro(desc) {
@@ -430,7 +430,7 @@ function esBullyingClaro(desc) {
 }
 
 // Accidente en el Karting (atracción DENTRO del centro comercial, no en
-// el parking): confirmado con el usuario como Accident CC siempre que se
+// el parking): confirmado con el usuario como Accidente CC siempre que se
 // mencione una ambulancia o un accidente, para no depender de que la IA
 // acierte la sub-categoría correcta (parking vs CC).
 function esAccidenteKartingClaro(desc) {
@@ -441,7 +441,7 @@ function esAccidenteKartingClaro(desc) {
 
 // Cartel/cartelería caída avisada a la empresa responsable, sin mención
 // de ninguna persona afectada: confirmado con el usuario como Operativa
-// (mantenimiento), no Danys. Se comprueba DESPUÉS de
+// (mantenimiento), no Daños. Se comprueba DESPUÉS de
 // categoriaAccidentePersonaClaro (no aquí en esOperativaClara) para que,
 // si el texto también describe una persona real cayéndose/lesionada por
 // culpa del cartel, gane esa regla primero y esta no la tape.
@@ -512,14 +512,14 @@ function esDescargaEnMuelleClaro(desc) {
 
 /* --- REGLAS ADICIONALES (revision completa 2026-08-17, a peticion del
  * usuario tras detectar errores sistematicos de categorizacion) ---
- * Se revisaron a mano las incidencias "relevantes" (Robatori, Danys,
- * Accident CC, Accident Parking) ya guardadas y se detectaron patrones
+ * Se revisaron a mano las incidencias "relevantes" (Robo, Daños,
+ * Accidente CC, Accidente Parking) ya guardadas y se detectaron patrones
  * repetidos que la IA zero-shot clasificaba mal: caidas/accidentes con
  * erratas no cubiertas por las listas existentes, notas administrativas
- * o de mantenimiento que se confundian con Danys/Accident Parking/CC,
- * comportamiento incivico sin incidente real que caia en Accident CC, y
- * danos a vehiculos que a veces caian en Accident Parking en vez de
- * Danys. Mismo criterio que el resto del fichero: solo decide una regla
+ * o de mantenimiento que se confundian con Daños/Accidente Parking/CC,
+ * comportamiento incivico sin incidente real que caia en Accidente CC, y
+ * danos a vehiculos que a veces caian en Accidente Parking en vez de
+ * Daños. Mismo criterio que el resto del fichero: solo decide una regla
  * lo que es inequivoco; el resto sigue su camino normal (reglas -> IA).
  */
 
@@ -540,8 +540,8 @@ function esAccidentePersonaAmpliado(desc) {
     PALABRAS_LESION_AMPLIADO.some(function (p) { return t.indexOf(p) !== -1; }) ||
     t.indexOf('ambulancia') !== -1;
   if (!hayLesion) return null;
-  if (PALABRAS_LUGAR_PARKING.some(function (p) { return t.indexOf(p) !== -1; })) return 'Accident Parking';
-  return 'Accident CC';
+  if (PALABRAS_LUGAR_PARKING.some(function (p) { return t.indexOf(p) !== -1; })) return 'Accidente Parking';
+  return 'Accidente CC';
 }
 
 var PALABRAS_HURTO_AMPLIADO = [
@@ -655,24 +655,24 @@ function clasificarIncidencia(desc) {
     return { categoria: categoriaAccidenteAmpliado, gravedad: CATEGORIA_A_GRAVEDAD[categoriaAccidenteAmpliado] };
   }
   if (esHurtoAmpliadoClaro(desc)) {
-    Logger.log('Red de seguridad (ampliada): patron de hurto -> Robatori');
-    return { categoria: 'Robatori', gravedad: CATEGORIA_A_GRAVEDAD['Robatori'] };
+    Logger.log('Red de seguridad (ampliada): patron de hurto -> Robo');
+    return { categoria: 'Robo', gravedad: CATEGORIA_A_GRAVEDAD['Robo'] };
   }
   if (esDanyVehiculoAmpliado(desc)) {
-    Logger.log('Red de seguridad (ampliada): dano a vehiculo -> Danys');
-    return { categoria: 'Danys', gravedad: CATEGORIA_A_GRAVEDAD['Danys'] };
+    Logger.log('Red de seguridad (ampliada): dano a vehiculo -> Daños');
+    return { categoria: 'Daños', gravedad: CATEGORIA_A_GRAVEDAD['Daños'] };
   }
   if (esRoturaObjetoClara(desc)) {
-    Logger.log('Red de seguridad (ampliada): objeto dañado/roto -> Danys');
-    return { categoria: 'Danys', gravedad: CATEGORIA_A_GRAVEDAD['Danys'] };
+    Logger.log('Red de seguridad (ampliada): objeto dañado/roto -> Daños');
+    return { categoria: 'Daños', gravedad: CATEGORIA_A_GRAVEDAD['Daños'] };
   }
   if (esAltercadoSinLesionClaro(desc)) {
     Logger.log('Red de seguridad (ampliada): altercado sin lesion -> Incidencia leve (Alta)');
-    return { categoria: 'Incidència Baixa', gravedad: 'Alta' };
+    return { categoria: 'Incidencia Leve', gravedad: 'Alta' };
   }
   if (esComportamientoIncivicoClaro(desc)) {
     Logger.log('Red de seguridad (ampliada): comportamiento incivico sin incidente real -> Incidencia leve');
-    return { categoria: 'Incidència Baixa', gravedad: CATEGORIA_A_GRAVEDAD['Incidència Baixa'] };
+    return { categoria: 'Incidencia Leve', gravedad: CATEGORIA_A_GRAVEDAD['Incidencia Leve'] };
   }
   var categoriaAccidente = categoriaAccidentePersonaClaro(desc);
   if (categoriaAccidente) {
@@ -680,24 +680,24 @@ function clasificarIncidencia(desc) {
     return { categoria: categoriaAccidente, gravedad: CATEGORIA_A_GRAVEDAD[categoriaAccidente] };
   }
   if (esIntentoRoboClaro(desc)) {
-    Logger.log('Red de seguridad: coincide con patrón de intento de robo -> Robatori');
-    return { categoria: 'Robatori', gravedad: CATEGORIA_A_GRAVEDAD['Robatori'] };
+    Logger.log('Red de seguridad: coincide con patrón de intento de robo -> Robo');
+    return { categoria: 'Robo', gravedad: CATEGORIA_A_GRAVEDAD['Robo'] };
   }
   if (esHurtoConsumadoClaro(desc)) {
-    Logger.log('Red de seguridad: coincide con patron de hurto consumado -> Robatori');
-    return { categoria: 'Robatori', gravedad: CATEGORIA_A_GRAVEDAD['Robatori'] };
+    Logger.log('Red de seguridad: coincide con patron de hurto consumado -> Robo');
+    return { categoria: 'Robo', gravedad: CATEGORIA_A_GRAVEDAD['Robo'] };
   }
   if (esDanyVehiculoClaro(desc)) {
-    Logger.log('Red de seguridad: coincide con patrón de daño a vehículo -> Accident Parking');
-    return { categoria: 'Accident Parking', gravedad: CATEGORIA_A_GRAVEDAD['Accident Parking'] };
+    Logger.log('Red de seguridad: coincide con patrón de daño a vehículo -> Accidente Parking');
+    return { categoria: 'Accidente Parking', gravedad: CATEGORIA_A_GRAVEDAD['Accidente Parking'] };
   }
   if (esBullyingClaro(desc)) {
-    Logger.log('Red de seguridad: coincide con patrón de bullying/acoso -> Incidència Baixa (Alta)');
-    return { categoria: 'Incidència Baixa', gravedad: 'Alta' };
+    Logger.log('Red de seguridad: coincide con patrón de bullying/acoso -> Incidencia Leve (Alta)');
+    return { categoria: 'Incidencia Leve', gravedad: 'Alta' };
   }
   if (esAccidenteKartingClaro(desc)) {
-    Logger.log('Red de seguridad: coincide con patrón de accidente en el Karting -> Accident CC');
-    return { categoria: 'Accident CC', gravedad: CATEGORIA_A_GRAVEDAD['Accident CC'] };
+    Logger.log('Red de seguridad: coincide con patrón de accidente en el Karting -> Accidente CC');
+    return { categoria: 'Accidente CC', gravedad: CATEGORIA_A_GRAVEDAD['Accidente CC'] };
   }
   if (esCartelCaidoClaro(desc)) {
     Logger.log('Red de seguridad: coincide con patrón de cartel caído -> Operativa');
@@ -714,25 +714,25 @@ function clasificarIncidencia(desc) {
 // prompt de Groq. Mismo criterio que con el modelo anterior: frases
 // cortas y sin ejemplos incrustados, para no liar al modelo con casos
 // límite que ya cubre la red de palabras clave (sobre todo Operativa).
-// OJO: "Incidència Baixa" lleva tilde en la "è" (grafía catalana) — la
-// web compara este valor de forma exacta en varios sitios.
-// IMPORTANTE: NO se incluye "Accident Laboral" como categoría de la IA.
+// OJO: la web compara este valor de forma exacta en varios sitios, así
+// que debe escribirse igual aquí y en js/app.js.
+// IMPORTANTE: NO se incluye "Accidente Laboral" como categoría de la IA.
 // Se decide EXCLUSIVAMENTE por la regla de palabras clave
 // (categoriaAccidentePersonaClaro), nunca por la IA.
 var CATEGORIAS_GROQ = [
-  { categoria: 'Robatori', descripcion: 'un robo o hurto, consumado o en grado de tentativa' },
-  { categoria: 'Danys', descripcion: 'daños materiales o vandalismo, sin ninguna persona herida' },
-  { categoria: 'Accident Parking', descripcion: 'un accidente sufrido por una persona dentro del parking o aparcamiento' },
-  { categoria: 'Accident CC', descripcion: 'un accidente sufrido por una persona dentro del centro comercial, fuera del parking' },
-  { categoria: 'Incidència Baixa', descripcion: 'una incidencia de seguridad leve: conducta problemática, altercado, persona sospechosa, etc.' },
+  { categoria: 'Robo', descripcion: 'un robo o hurto, consumado o en grado de tentativa' },
+  { categoria: 'Daños', descripcion: 'daños materiales o vandalismo, sin ninguna persona herida' },
+  { categoria: 'Accidente Parking', descripcion: 'un accidente sufrido por una persona dentro del parking o aparcamiento' },
+  { categoria: 'Accidente CC', descripcion: 'un accidente sufrido por una persona dentro del centro comercial, fuera del parking' },
+  { categoria: 'Incidencia Leve', descripcion: 'una incidencia de seguridad leve: conducta problemática, altercado, persona sospechosa, etc.' },
   { categoria: 'Operativa', descripcion: 'una tarea operativa o de mantenimiento rutinaria del centro' }
 ];
 var CATEGORIA_A_GRAVEDAD = {
-  'Robatori': 'Alta',
-  'Danys': 'Media',
-  'Accident Parking': 'Media',
-  'Accident CC': 'Media',
-  'Incidència Baixa': 'Media',
+  'Robo': 'Alta',
+  'Daños': 'Media',
+  'Accidente Parking': 'Media',
+  'Accidente CC': 'Media',
+  'Incidencia Leve': 'Media',
   'Operativa': 'Baja'
 };
 
@@ -1010,11 +1010,68 @@ function guardarIncidencia(inc) {
     inc.gravedad,
     inc.categoria,
     inc.resumen,
-    'Tancat',
+    'Cerrado',
     inc.original,
     inc.enlace || ''
   ]);
   invalidarCacheListado();
+}
+
+/**
+ * Migración puntual: las filas guardadas antes de este cambio tienen los
+ * valores de categoría y estado en catalán ('Robatori', 'Danys',
+ * 'Incidència Baixa', 'Obert', 'Tancat'...); el código ahora escribe y
+ * compara siempre en español ('Robo', 'Daños', 'Incidencia Leve',
+ * 'Abierto', 'Cerrado'...). Sin migrar las filas antiguas, dejarían de
+ * coincidir con los filtros y con las comparaciones de categoría/estado
+ * de la web. Esta función solo traduce el texto ya guardado en las
+ * columnas E (categoría) y G (estado): NO vuelve a llamar a la IA ni
+ * reclasifica nada (para eso está reclasificarHistorico(), más abajo).
+ * Ejecútala una sola vez (▶ Ejecutar -> migrarCategoriasYEstadosAEspanol)
+ * y revisa el resultado en el log.
+ */
+var TRADUCCION_CATEGORIAS = {
+  'Robatori': 'Robo',
+  'Danys': 'Daños',
+  'Incidència Baixa': 'Incidencia Leve',
+  'Accident CC': 'Accidente CC',
+  'Accident Parking': 'Accidente Parking',
+  'Accident Laboral': 'Accidente Laboral'
+};
+var TRADUCCION_ESTADOS = { 'Obert': 'Abierto', 'Tancat': 'Cerrado' };
+
+function migrarCategoriasYEstadosAEspanol() {
+  var hoja = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+  var datos = hoja.getDataRange().getValues();
+  var inicio = (datos.length > 0 && !(datos[0][0] instanceof Date)) ? 1 : 0;
+  if (datos.length <= inicio) {
+    Logger.log('No hay filas de datos que migrar.');
+    return;
+  }
+  var nuevasCategorias = [], nuevosEstados = [];
+  var cambiosCategoria = 0, cambiosEstado = 0, revisadas = 0;
+  for (var i = inicio; i < datos.length; i++) {
+    var f = datos[i];
+    if (!f[1] && !f[5]) { nuevasCategorias.push([f[4]]); nuevosEstados.push([f[6]]); continue; } // fila vacía, no tocar
+    revisadas++;
+    var categoria = f[4];
+    var estado = f[6];
+    if (TRADUCCION_CATEGORIAS.hasOwnProperty(categoria)) {
+      categoria = TRADUCCION_CATEGORIAS[categoria];
+      cambiosCategoria++;
+    }
+    if (TRADUCCION_ESTADOS.hasOwnProperty(estado)) {
+      estado = TRADUCCION_ESTADOS[estado];
+      cambiosEstado++;
+    }
+    nuevasCategorias.push([categoria]);
+    nuevosEstados.push([estado]);
+  }
+  hoja.getRange(inicio + 1, 5, nuevasCategorias.length, 1).setValues(nuevasCategorias); // columna E
+  hoja.getRange(inicio + 1, 7, nuevosEstados.length, 1).setValues(nuevosEstados);       // columna G
+  invalidarCacheListado();
+  Logger.log('Revisadas ' + revisadas + ' filas. Categorías traducidas: ' + cambiosCategoria +
+    '. Estados traducidos: ' + cambiosEstado + '.');
 }
 
 /* === LIMPIEZA ÚNICA: reclasificar filas ya guardadas =============
@@ -1373,7 +1430,7 @@ function doGet(e) {
         gravedad: f[3],
         categoria: f[4],
         resumen: f[5],
-        estat: f[6] || 'Tancat',
+        estat: f[6] || 'Cerrado',
         original: f[7] || '',
         enlace: f[8] || ''
       });
