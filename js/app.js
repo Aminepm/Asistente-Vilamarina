@@ -566,7 +566,7 @@ function obrirModalNova(categoriaDefecto) {
   document.getElementById("n-hora").value = hora;
   document.getElementById("n-gravedad").value = "Media";
   document.getElementById("n-categoria").value = categoriaDefecto || "Incidència Baixa";
-  document.querySelector('input[name="n-estat"][value="Obert"]').checked = true;
+  document.querySelector('input[name="n-estat"][value="Tancat"]').checked = true;
   const titulo = document.getElementById("modal-nova-titol");
   if (titulo) titulo.textContent = categoriaDefecto === "Mantenimiento" ? "Nuevo aviso de mantenimiento" : "Nueva incidencia";
   document.getElementById("modal-nova").classList.add("open");
@@ -1668,7 +1668,7 @@ function mapearFilaSheet(f, i) {
     ubicacion: "Vilamarina",
     vigilant: "",
     accion: "",
-    estat: f.estat || (f.gravedad === "Crítica" ? "Obert" : "Tancat"),
+    estat: f.estat || "Tancat",
     correo: "",
     enlace: f.enlace || "",
     origen: "sheets"
